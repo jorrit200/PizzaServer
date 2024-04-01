@@ -34,7 +34,7 @@ internal class PizzaServer
                 Console.WriteLine("We are getting a GET request");
                 const string eol = "\r\n"; // HTTP/1.1 defines the sequence CR LF as the end-of-line marker
 
-                byte[] response = Encoding.UTF8.GetBytes("PIZZA/1.1 101 Switching Protocols" + eol
+                byte[] response = Encoding.UTF8.GetBytes("PIZZA/1.1 200 OK" + eol
                     + "Sec-WebSocket-Accept: " + Convert.ToBase64String(
                         System.Security.Cryptography.SHA1.Create().ComputeHash(
                             Encoding.UTF8.GetBytes(
