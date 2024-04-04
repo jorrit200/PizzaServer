@@ -49,7 +49,7 @@ internal class PizzaServer
 
             stream.Read(bytes, 0, bytes.Length);
 
-            String data = Encoding.UTF8.GetString(bytes);
+            String data = Encoding.ASCII.GetString(bytes);
             
             if (Regex.IsMatch(data, "^GET")) {
                 Console.WriteLine("We are getting a GET request");
@@ -65,32 +65,32 @@ internal class PizzaServer
                 {
                     clientRSA.FromXmlString(ClientsPublicKey);
                     
-                    response = Encoding.UTF8.GetBytes("PIZZA/1.1 200 OK" + eol
+                    response = Encoding.ASCII.GetBytes("PIZZA/1.1 200 OK" + eol
                         + "public-key: " + publicKeyXML     
                     + eol);    
                 }
                 else if (requestType == "pizza")
                 {
-                    response = Encoding.UTF8.GetBytes("PIZZA/1.1 400 OK" + eol
+                    response = Encoding.ASCII.GetBytes("PIZZA/1.1 400 OK" + eol
                          + "AYO WTF" 
                          + eol);
-                    response = clientRSA.Encrypt(response, false);
+                    response = clientRSA.Encrypt(response, true);
                     
                     byte[] decrypyed_message =
-                        myRSA.Decrypt(Encoding.UTF8.GetBytes(message), false);
+                        myRSA.Decrypt(Encoding.ASCII.GetBytes(message), true);
                     
                 }
                 else
                 {
-                    response = Encoding.UTF8.GetBytes("PIZZA/1.1 400 OK" + eol
-                        + "AYO WTF"     
+                    response = Encoding.ASCII.GetBytes("PIZZA/1.1 400 OK" + eol
+                        + "AYO WTF"
                         + eol);
-                    response = clientRSA.Encrypt(response, false);
+                    response = clientRSA.Encrypt(response, true);
                 }
                 
                 
                 
-                String responseStr = Encoding.UTF8.GetString(response);
+                String responseStr = Encoding.ASCII.GetString(response);
                 Console.WriteLine("resSize: " + responseStr.Length);
 
                 stream.Write(response, 0, response.Length);
