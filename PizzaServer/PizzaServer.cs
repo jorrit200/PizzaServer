@@ -18,42 +18,22 @@ internal class PizzaServer
         tcpListener.Start();
         Console.WriteLine("server started");
         
-        
-        
-        // var rsa = new RSACryptoServiceProvider();
-        // string publicKeyXML = rsa.ToXmlString(false);
-        // string privateKeyXML = rsa.ToXmlString(true);
-        // RSAParameters funnyparams = rsa.ExportParameters(true);
-        // var x = new XmlSerializer(funnyparams.GetType());
-        // x.Serialize(Console.Out, funnyparams);
-        
-        string path = @"C:\Users\haane\RiderProjects\PizaServer\PizzaServer\keys.xml";
-        string xmlString =  System.IO.File.ReadAllText(path);
-        RSAParameters params2;
+        string path = @"..\..\..\keys.xml";
+        string xmlString = File.ReadAllText(path);
+        RSAParameters rsaParameters;
         using (StringReader reader = new StringReader(xmlString))
         {
             XmlSerializer serializer = new XmlSerializer(typeof(RSAParameters));
-            params2 = (RSAParameters)serializer.Deserialize(reader);
+            rsaParameters = (RSAParameters)serializer.Deserialize(reader);
         }
 
-        var rsa = new RSACryptoServiceProvider();
-        rsa.ImportParameters(params2);
-        string publicKeyXML = rsa.ToXmlString(false);
-        string privateKeyXML = rsa.ToXmlString(true);
-        byte[] dataToSend = Encoding.UTF8.GetBytes("Hello world!");
-        byte[]encryptedData = rsa.Encrypt(dataToSend, false);
-                    
-        string messageEncryptedReceived = Encoding.UTF8.GetString(encryptedData);
-                    
-        byte[] decryptedData = rsa.Decrypt(encryptedData, false);
-        string messageReceived = Encoding.UTF8.GetString(decryptedData);
-                    
-        Console.WriteLine(messageEncryptedReceived);
-        Console.WriteLine(messageReceived);
+        var myRSA = new RSACryptoServiceProvider();
+        myRSA.ImportParameters(rsaParameters);
+        string publicKeyXML = myRSA.ToXmlString(false);
         
+        var clientRSA = new RSACryptoServiceProvider();
         
-        
-        
+
         TcpClient tcpClient = tcpListener.AcceptTcpClient();
         Console.WriteLine("client connected");
         NetworkStream stream = tcpClient.GetStream();
@@ -66,21 +46,28 @@ internal class PizzaServer
 
             stream.Read(bytes, 0, bytes.Length);
 
-            //translate bytes of request to string
             String data = Encoding.UTF8.GetString(bytes);
-            // Console.WriteLine(data);
             
             if (Regex.IsMatch(data, "^GET")) {
                 Console.WriteLine("We are getting a GET request");
                 const string eol = "\r\n";
                 string requestType = new Regex("Type: (.*)").Match(data).Groups[1].Value.Trim();
                 string message = new Regex("Message: (.*)").Match(data).Groups[1].Value.Trim();
+                string ClientsPublicKey = new Regex("Public-key: (.*)").Match(data).Groups[1].Value.Trim();
                 
                 Console.WriteLine("Request type = " + requestType);
 
                 byte[] response;
                 if (requestType == "request-public-key")
                 {
+                    RSAParameters clientRSAParameters;
+                    using (StringReader reader = new StringReader(ClientsPublicKey))
+                    {
+                        XmlSerializer serializer = new XmlSerializer(typeof(RSAParameters));
+                        clientRSAParameters = (RSAParameters)serializer.Deserialize(reader);
+                    }
+                    clientRSA.ImportParameters(clientRSAParameters);
+                    
                     response = Encoding.UTF8.GetBytes("PIZZA/1.1 200 OK" + eol
                         + "public-key: " + publicKeyXML     
                     + eol);    
