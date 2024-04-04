@@ -5,10 +5,9 @@ using System.Net;
 using System.Security.Cryptography;
 using System.Xml;
 using System.Xml.Serialization;
+using System.Net.Sockets;
 
 namespace PizzaServer;
-
-using System.Net.Sockets;
 
 internal class PizzaServer
 {
@@ -71,7 +70,7 @@ internal class PizzaServer
                     response = Encoding.UTF8.GetBytes("PIZZA/1.1 400 OK" + eol
                          + "AYO WTF" 
                          + eol);
-                    
+                    response = clientRSA.Encrypt(response, false);
                     byte[] decrypyed_message =
                         RSA.Create().Decrypt(Encoding.UTF8.GetBytes(message), RSAEncryptionPadding.OaepSHA256);
                     
@@ -81,6 +80,7 @@ internal class PizzaServer
                     response = Encoding.UTF8.GetBytes("PIZZA/1.1 400 OK" + eol
                         + "AYO WTF"     
                         + eol);
+                    response = clientRSA.Encrypt(response, false);
                 }
                 
                 
