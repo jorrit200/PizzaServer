@@ -60,13 +60,7 @@ internal class PizzaServer
                 byte[] response;
                 if (requestType == "request-public-key")
                 {
-                    RSAParameters clientRSAParameters;
-                    using (StringReader reader = new StringReader(ClientsPublicKey))
-                    {
-                        XmlSerializer serializer = new XmlSerializer(typeof(RSAParameters));
-                        clientRSAParameters = (RSAParameters)serializer.Deserialize(reader);
-                    }
-                    clientRSA.ImportParameters(clientRSAParameters);
+                    clientRSA.FromXmlString(ClientsPublicKey);
                     
                     response = Encoding.UTF8.GetBytes("PIZZA/1.1 200 OK" + eol
                         + "public-key: " + publicKeyXML     
