@@ -30,12 +30,16 @@ internal class PizzaServer
         myRSA.ImportParameters(rsaParameters);
         string publicKeyXML = myRSA.ToXmlString(false);
         
+        Console.WriteLine("Key Size: " + myRSA.KeySize);
+        
         var clientRSA = new RSACryptoServiceProvider();
         
 
         TcpClient tcpClient = tcpListener.AcceptTcpClient();
         Console.WriteLine("client connected");
         NetworkStream stream = tcpClient.GetStream();
+
+
 
         //enter to an infinite cycle to be able to handle every change in stream
         while (true) {
@@ -71,8 +75,9 @@ internal class PizzaServer
                          + "AYO WTF" 
                          + eol);
                     response = clientRSA.Encrypt(response, false);
+                    
                     byte[] decrypyed_message =
-                        RSA.Create().Decrypt(Encoding.UTF8.GetBytes(message), RSAEncryptionPadding.OaepSHA256);
+                        myRSA.Decrypt(Encoding.UTF8.GetBytes(message), false);
                     
                 }
                 else
@@ -86,7 +91,7 @@ internal class PizzaServer
                 
                 
                 String responseStr = Encoding.UTF8.GetString(response);
-                Console.WriteLine("res: " + responseStr);
+                Console.WriteLine("resSize: " + responseStr.Length);
 
                 stream.Write(response, 0, response.Length);
             } else {
