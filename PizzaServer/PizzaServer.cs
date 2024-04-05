@@ -47,13 +47,14 @@ internal class PizzaServer
                 Console.WriteLine("We are getting a GET request");
                 string requestType = new Regex("Type: (.*)").Match(data).Groups[1].Value.Trim();
                 string message = new Regex("Message: (.*)").Match(data).Groups[1].Value.Trim();
-                string ClientsPublicKey = new Regex("Public-key: (.*)").Match(data).Groups[1].Value.Trim();
+                string clientsPublicKey = new Regex("Public-key: (.*)").Match(data).Groups[1].Value.Trim();
+                string clientsIv = new Regex("IV: (.*)").Match(data).Groups[1].Value.Trim();
                 
                 byte[] response;
                 bool encrypted = false;
                 if (requestType == "request-public-key")
                 {
-                    clientRSA.FromXmlString(ClientsPublicKey);
+                    clientRSA.FromXmlString(clientsPublicKey);
                     symmetricKey = GenerateSymmetricKey();
                     symmetricKey.GenerateIV();
 
@@ -68,13 +69,19 @@ internal class PizzaServer
                 }
                 else if (requestType == "pizza")
                 {
-                    response = BuildResponse("now you're speaking my language", symmetricKey);
-                    encrypted = true;
+                    
+                    // byte[] byte_array = StringToByteBase64(message);
+                    // byte[] decrypyed_message = myRSA.Decrypt(byte_array, true);
+                    // string straightDecrypt = ByteToStringBase64(decrypyed_message);
+                    // string utfDecrypt = ByteToStringUtf(decrypyed_message);
 
-                    byte[] byte_array = StringToByteBase64(message);
-                    byte[] decrypyed_message = myRSA.Decrypt(byte_array, true);
-                    string straightDecrypt = ByteToStringBase64(decrypyed_message);
-                    string utfDecrypt = ByteToStringUtf(decrypyed_message);
+                    byte[] clientsIvArray = StringToByteBase64(clientsIv);
+                    byte[] messageArray = StringToByteBase64(message);
+                    byte[] decryptedMessage = SymmetricDecrypt(messageArray, symmetricKey);
+                    string utfDecryptedMessage = ByteToStringUtf(decryptedMessage);
+                    Console.WriteLine("Decrypted message: " + utfDecryptedMessage);
+                    
+                    response = BuildResponse("now you're speaking my language", symmetricKey);
                 }
                 else
                 {
@@ -136,6 +143,11 @@ internal class PizzaServer
     static byte[] SymmetricEncrypt(byte[] message, Aes key)
     {
         return key.EncryptCbc(message, key.IV);
+    }
+    
+    static byte[] SymmetricDecrypt(byte[] message, Aes key)
+    {
+        return key.DecryptCbc(message, key.IV);
     }
     
 }
