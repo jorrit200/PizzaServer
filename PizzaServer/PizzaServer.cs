@@ -55,7 +55,10 @@ internal class PizzaServer
                     clientRSA.FromXmlString(ClientsPublicKey);
                     var symmetricKey = GenerateSymmetricKey();
                     symmetricKey.GenerateIV();
-                    var encryptedSymmetricKey = clientRSA.Encrypt(symmetricKey.IV.Concat(symmetricKey.Key).ToArray(), true);
+
+                    Console.WriteLine(BitConverter.ToString(symmetricKey.Key));
+                    
+                    var encryptedSymmetricKey = clientRSA.Encrypt(symmetricKey.Key, true);
                     
                     
                     response = StringToByteUtf("PIZZA/1.1 200 OK" + eol
