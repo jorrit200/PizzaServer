@@ -60,7 +60,7 @@ internal class PizzaServer
                     
                     response = StringToByteUtf("PIZZA/1.1 200 OK" + eol
                                              + "public-key: " + publicKeyXML + eol
-                                             + "symmetric-key: " + ByteToStringBase64(encryptedSymmetricKey));
+                                             + "symmetric-key: " + ByteToStringBase64(encryptedSymmetricKey) + eot);
                 }
                 else if (requestType == "pizza")
                 {
