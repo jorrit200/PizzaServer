@@ -77,6 +77,7 @@ internal class PizzaServer
 
                     byte[] clientsIvArray = StringToByteBase64(clientsIv);
                     byte[] messageArray = StringToByteBase64(message);
+                    symmetricKey.IV = clientsIvArray;
                     byte[] decryptedMessage = SymmetricDecrypt(messageArray, symmetricKey);
                     string utfDecryptedMessage = ByteToStringUtf(decryptedMessage);
                     Console.WriteLine("Decrypted message: " + utfDecryptedMessage);
