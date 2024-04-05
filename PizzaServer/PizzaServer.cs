@@ -13,6 +13,7 @@ internal class PizzaServer
 {
     
     const string eol = "\r\n";
+    const string eom = "EOM;";
     const string eot = "EOT;";
     public static void Main(string[] args)
     {
@@ -22,8 +23,6 @@ internal class PizzaServer
 
         var myRSA = new RSACryptoServiceProvider();
         string publicKeyXML = myRSA.ToXmlString(false);
-        
-        Console.WriteLine("Key Size: " + myRSA.KeySize);
         
         var clientRSA = new RSACryptoServiceProvider();
         
@@ -46,8 +45,6 @@ internal class PizzaServer
             
             if (Regex.IsMatch(data, "^GET")) {
                 Console.WriteLine("We are getting a GET request");
-
-                Console.WriteLine(data);
                 string requestType = new Regex("Type: (.*)").Match(data).Groups[1].Value.Trim();
                 string message = new Regex("Message: (.*)").Match(data).Groups[1].Value.Trim();
                 string ClientsPublicKey = new Regex("Public-key: (.*)").Match(data).Groups[1].Value.Trim();
@@ -61,8 +58,6 @@ internal class PizzaServer
                     response = StringToByteUtf("PIZZA/1.1 200 OK" + eol
                                                                          + "public-key: " + publicKeyXML     
                                                                          + eol);
-                    Console.WriteLine("MY-public-key: " + publicKeyXML);
-                    Console.WriteLine("Client-public-key: " + ClientsPublicKey);
                 }
                 else if (requestType == "pizza")
                 {
@@ -70,30 +65,15 @@ internal class PizzaServer
                     encrypted = true;
 
                     byte[] byte_array = StringToByteBase64(message);
-                    Console.WriteLine(byte_array.Length);
-                    Console.WriteLine(BitConverter.ToString(byte_array));
                     byte[] decrypyed_message = myRSA.Decrypt(byte_array, true);
                     string straightDecrypt = ByteToStringBase64(decrypyed_message);
                     string utfDecrypt = ByteToStringUtf(decrypyed_message);
-                    Console.WriteLine("Base64: " + straightDecrypt);
-                    Console.WriteLine("UTF8" + utfDecrypt);
                 }
                 else
                 {
                     response = StringToByteUtf("PIZZA/1.1 400 OK" + eol
                                                                + "AYO WTF"
                                                                + eol);
-                }
-
-
-
-                if (encrypted){
-                    String responseStr = ByteToStringUtf(response);
-                    Console.WriteLine("resSize: " + response.Length);
-                    // String decodedRESP = Encoding.UTF8.GetString(myRSA.Decrypt(response, true));
-                    Console.WriteLine("res: " + responseStr);
-                    string hex = BitConverter.ToString(response);
-                    Console.WriteLine("Hex: " + hex);
                 }
 
                 stream.Write(response, 0, response.Length);
@@ -129,11 +109,11 @@ internal class PizzaServer
         string header_message = "Message: ";
         string digsig = "its me btw";
         
-        byte[] message_bytes = StringToByteUtf(response + eot + digsig);
+        byte[] message_bytes = StringToByteUtf(response + eom + digsig);
         byte[] header_bytes = StringToByteUtf(header_protocol + header_message);
         byte[] encrypted_message = rsa.Encrypt(message_bytes, true);
         string based_message = ByteToStringBase64(encrypted_message);
-        byte[] final_message = StringToByteUtf(based_message);
+        byte[] final_message = StringToByteUtf(based_message + eot);
         byte[] bytes_to_send = header_bytes.Concat(final_message).ToArray();
         return bytes_to_send;
 
