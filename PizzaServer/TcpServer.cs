@@ -13,13 +13,13 @@ public class TcpServer
     private TcpListener _tcpListener;
     private RSACryptoServiceProvider _rsa;
     private RSACryptoServiceProvider _clientRsa;
+    private Aes _aes;
     private bool _clientConnected = false;
     private bool _clientKeyRecieved = false;
     public TcpServer(int port, string KeyPath)
     {
         this.port = port;
         _tcpListener = new TcpListener(IPAddress.Parse("127.0.0.1"), port);
-        
         
     }
 }
