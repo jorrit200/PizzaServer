@@ -14,6 +14,7 @@ internal class PizzaServer
     
     const string eol = "\r\n";
     const string eot = "EOT;";
+    private static Aes symmetricKey;
     public static void Main(string[] args)
     {
         TcpListener tcpListener = new TcpListener(IPAddress.Parse("127.0.0.1"),6789);
@@ -53,7 +54,7 @@ internal class PizzaServer
                 if (requestType == "request-public-key")
                 {
                     clientRSA.FromXmlString(ClientsPublicKey);
-                    var symmetricKey = GenerateSymmetricKey();
+                    symmetricKey = GenerateSymmetricKey();
                     symmetricKey.GenerateIV();
 
                     Console.WriteLine(BitConverter.ToString(symmetricKey.Key));
@@ -67,7 +68,7 @@ internal class PizzaServer
                 }
                 else if (requestType == "pizza")
                 {
-                    response = buildResponse("now you're speaking my language", clientRSA);
+                    response = BuildResponse("now you're speaking my language", symmetricKey);
                     encrypted = true;
 
                     byte[] byte_array = StringToByteBase64(message);
@@ -116,17 +117,23 @@ internal class PizzaServer
         return aes;
     }
     
-    static byte[] buildResponse(string response, RSACryptoServiceProvider rsa = null)
+    static byte[] BuildResponse(string response, Aes key = null)
     {
         string header_protocol = "GET PIZZA/1.1" + eol;
         string header_message = "Message: ";
         byte[] message_bytes = StringToByteUtf(response);
         byte[] header_bytes = StringToByteUtf(header_protocol + header_message);
-        byte[] encrypted_message = rsa.Encrypt(message_bytes, true);
+        byte[] encrypted_message = SymmetricEncrypt(message_bytes, key);
         string based_message = ByteToStringBase64(encrypted_message);
         byte[] final_message = StringToByteUtf(based_message + eot);
         byte[] bytes_to_send = header_bytes.Concat(final_message).ToArray();
         return bytes_to_send;
 
     }
+    
+    static byte[] SymmetricEncrypt(byte[] message, Aes key)
+    {
+        return key.EncryptCbc(message, key.IV);
+    }
+    
 }
