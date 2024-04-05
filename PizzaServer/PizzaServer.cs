@@ -13,7 +13,6 @@ internal class PizzaServer
 {
     
     const string eol = "\r\n";
-    const string eom = "EOM;";
     const string eot = "EOT;";
     public static void Main(string[] args)
     {
@@ -54,10 +53,14 @@ internal class PizzaServer
                 if (requestType == "request-public-key")
                 {
                     clientRSA.FromXmlString(ClientsPublicKey);
+                    var symmetricKey = GenerateSymmetricKey();
+                    symmetricKey.GenerateIV();
+                    var encryptedSymmetricKey = clientRSA.Encrypt(symmetricKey.IV.Concat(symmetricKey.Key).ToArray(), true);
+                    
                     
                     response = StringToByteUtf("PIZZA/1.1 200 OK" + eol
-                                                                         + "public-key: " + publicKeyXML     
-                                                                         + eol);
+                                             + "public-key: " + publicKeyXML + eol
+                                             + "symmetric-key: " + ByteToStringBase64(encryptedSymmetricKey));
                 }
                 else if (requestType == "pizza")
                 {
@@ -103,13 +106,18 @@ internal class PizzaServer
         return Encoding.UTF8.GetString(bytes);
     }
     
+    static Aes GenerateSymmetricKey()
+    {
+        Aes aes = Aes.Create();
+        aes.GenerateKey();
+        return aes;
+    }
+    
     static byte[] buildResponse(string response, RSACryptoServiceProvider rsa = null)
     {
         string header_protocol = "GET PIZZA/1.1" + eol;
         string header_message = "Message: ";
-        string digsig = "its me btw";
-        
-        byte[] message_bytes = StringToByteUtf(response + eom + digsig);
+        byte[] message_bytes = StringToByteUtf(response);
         byte[] header_bytes = StringToByteUtf(header_protocol + header_message);
         byte[] encrypted_message = rsa.Encrypt(message_bytes, true);
         string based_message = ByteToStringBase64(encrypted_message);
