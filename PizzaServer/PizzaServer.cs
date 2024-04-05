@@ -10,8 +10,8 @@ using System.Net.Sockets;
 namespace PizzaServer;
 internal class PizzaServer
 {
-    const string Eol = "\r\n";
-    const string Eot = "EOT;";
+    public const string Eol = "\r\n";
+    public const string Eot = "EOT;";
     private static Aes _symmetricKey;
     private static string protocol = "TCP";
     
@@ -87,78 +87,81 @@ internal class PizzaServer
 
         if (protocol == "TCP")
         {
-            tcpListener.Start();
-            Console.WriteLine("server started");
-            TcpClient tcpClient = tcpListener.AcceptTcpClient();
-            Console.WriteLine("client connected");
-            NetworkStream stream = tcpClient.GetStream();
-
-
-
-            //enter to an infinite cycle to be able to handle every change in stream
-            while (true)
-            {
-                while (tcpClient.Available < 3)
-                {
-                }
-
-                byte[] bytes = new byte[tcpClient.Available];
-
-                stream.Read(bytes, 0, bytes.Length);
-
-                String data = ByteToStringUtf(bytes);
-
-                if (Regex.IsMatch(data, "^GET"))
-                {
-                    Console.WriteLine("We are getting a GET request");
-                    string requestType = new Regex("Type: (.*)").Match(data).Groups[1].Value.Trim();
-                    string message = new Regex("Message: (.*)").Match(data).Groups[1].Value.Trim();
-                    string clientsPublicKey = new Regex("Public-key: (.*)").Match(data).Groups[1].Value.Trim();
-                    string clientsIv = new Regex("IV: (.*)").Match(data).Groups[1].Value.Trim();
-
-                    byte[] response;
-                    bool encrypted = false;
-                    if (requestType == "request-public-key")
-                    {
-                        clientRsa.FromXmlString(clientsPublicKey);
-                        _symmetricKey = GenerateSymmetricKey();
-                        _symmetricKey.GenerateIV();
-
-                        Console.WriteLine(BitConverter.ToString(_symmetricKey.Key));
-
-                        var encryptedSymmetricKey = clientRsa.Encrypt(_symmetricKey.Key, true);
-
-
-                        response = StringToByteUtf("PIZZA/1.1 200 OK" + Eol
-                                                                      + "public-key: " + publicKeyXml + Eol
-                                                                      + "symmetric-key: " +
-                                                                      ByteToStringBase64(encryptedSymmetricKey) + Eot);
-                    }
-                    else if (requestType == "pizza")
-                    {
-                        string decodedMessage = DecodeMessage(message, _symmetricKey, clientsIv);
-
-                        response = BuildResponse("now you're speaking my language", _symmetricKey);
-                    }
-
-                    else if (requestType == "menue")
-                    {
-                        response = BuildResponse(DictionaryToString(_menu), _symmetricKey);
-                    }
-                    else
-                    {
-                        response = StringToByteUtf("PIZZA/1.1 400 OK" + Eol
-                                                                      + "AYO WTF"
-                                                                      + Eol);
-                    }
-
-                    stream.Write(response, 0, response.Length);
-                }
-                else
-                {
-                    Console.WriteLine("We dont have a GET request");
-                }
-            }
+            TcpSubjectServer tcpSubjectServer = new TcpSubjectServer(6789);
+            tcpSubjectServer.Attach(new KeyExchangeObserver(), "request-public-key");
+            tcpSubjectServer.Start();
+            // tcpListener.Start();
+            // Console.WriteLine("server started");
+            // TcpClient tcpClient = tcpListener.AcceptTcpClient();
+            // Console.WriteLine("client connected");
+            // NetworkStream stream = tcpClient.GetStream();
+            //
+            //
+            //
+            // //enter to an infinite cycle to be able to handle every change in stream
+            // while (true)
+            // {
+            //     while (tcpClient.Available < 3)
+            //     {
+            //     }
+            //
+            //     byte[] bytes = new byte[tcpClient.Available];
+            //
+            //     stream.Read(bytes, 0, bytes.Length);
+            //
+            //     String data = EncoderHelper.ByteToStringUtf(bytes);
+            //
+            //     if (Regex.IsMatch(data, "^GET"))
+            //     {
+            //         Console.WriteLine("We are getting a GET request");
+            //         string requestType = new Regex("Type: (.*)").Match(data).Groups[1].Value.Trim();
+            //         string message = new Regex("Message: (.*)").Match(data).Groups[1].Value.Trim();
+            //         string clientsPublicKey = new Regex("Public-key: (.*)").Match(data).Groups[1].Value.Trim();
+            //         string clientsIv = new Regex("IV: (.*)").Match(data).Groups[1].Value.Trim();
+            //
+            //         byte[] response;
+            //         bool encrypted = false;
+            //         if (requestType == "request-public-key")
+            //         {
+            //             clientRsa.FromXmlString(clientsPublicKey);
+            //             _symmetricKey = EncoderHelper.GenerateSymmetricKey();
+            //             _symmetricKey.GenerateIV();
+            //
+            //             Console.WriteLine(BitConverter.ToString(_symmetricKey.Key));
+            //
+            //             var encryptedSymmetricKey = clientRsa.Encrypt(_symmetricKey.Key, true);
+            //
+            //
+            //             response = EncoderHelper.StringToByteUtf("PIZZA/1.1 200 OK" + Eol
+            //                                                           + "public-key: " + publicKeyXml + Eol
+            //                                                           + "symmetric-key: " +
+            //                                                           EncoderHelper.ByteToStringBase64(encryptedSymmetricKey) + Eot);
+            //         }
+            //         else if (requestType == "pizza")
+            //         {
+            //             string decodedMessage = DecodeMessage(message, _symmetricKey, clientsIv);
+            //
+            //             response = BuildResponse("now you're speaking my language", _symmetricKey);
+            //         }
+            //
+            //         else if (requestType == "menue")
+            //         {
+            //             response = BuildResponse(DictionaryToString(_menu), _symmetricKey);
+            //         }
+            //         else
+            //         {
+            //             response = EncoderHelper.StringToByteUtf("PIZZA/1.1 400 OK" + Eol
+            //                                                           + "AYO WTF"
+            //                                                           + Eol);
+            //         }
+            //
+            //         stream.Write(response, 0, response.Length);
+            //     }
+            //     else
+            //     {
+            //         Console.WriteLine("We dont have a GET request");
+            //     }
+            // }
         }
         else
         {
@@ -168,7 +171,7 @@ internal class PizzaServer
             while (true)
             {
                 byte[] receivedBytes = udpClient.Receive(ref remoteIpEndPoint);
-                string receivedData = ByteToStringUtf(receivedBytes);
+                string receivedData = EncoderHelper.ByteToStringUtf(receivedBytes);
                 Console.WriteLine(receivedData);
                 if (Regex.IsMatch(receivedData, "^GET"))
                 {
@@ -182,17 +185,17 @@ internal class PizzaServer
                     if (requestType == "request-public-key")
                     {
                         clientRsa.FromXmlString(clientsPublicKey);
-                        _symmetricKey = GenerateSymmetricKey();
+                        _symmetricKey = EncoderHelper.GenerateSymmetricKey();
                         _symmetricKey.GenerateIV();
 
                         Console.WriteLine(BitConverter.ToString(_symmetricKey.Key));
 
                         var encryptedSymmetricKey = clientRsa.Encrypt(_symmetricKey.Key, true);
                         
-                        response = StringToByteUtf("PIZZA/1.1 200 OK" + Eol
+                        response = EncoderHelper.StringToByteUtf("PIZZA/1.1 200 OK" + Eol
                           + "public-key: " + publicKeyXml + Eol
                           + "symmetric-key: " +
-                          ByteToStringBase64(encryptedSymmetricKey) + Eot);
+                          EncoderHelper.ByteToStringBase64(encryptedSymmetricKey) + Eot);
                         udpClient.Send(response, response.Length, remoteIpEndPoint);
 
                     }
@@ -201,67 +204,37 @@ internal class PizzaServer
         }
     }
     
-    static byte[] StringToByteBase64(string stringToEncode)
-    {
-        return Convert.FromBase64String(stringToEncode);
-    }
     
-    static string ByteToStringBase64(byte[] bytes)
-    {
-        return Convert.ToBase64String(bytes);
-    }
-    
-    static byte[] StringToByteUtf(string stringToEncode)
-    {
-        return Encoding.UTF8.GetBytes(stringToEncode);
-    }
-    
-    static string ByteToStringUtf(byte[] bytes)
-    {
-        return Encoding.UTF8.GetString(bytes);
-    }
-    
-    static Aes GenerateSymmetricKey()
-    {
-        Aes aes = Aes.Create();
-        aes.GenerateKey();
-        return aes;
-    }
     
     static string DecodeMessage(string message, Aes aes, string iv)
     {
-        byte[] encryptedBytes = StringToByteBase64(message);
-        byte[] ivBytes = StringToByteBase64(iv);
+        byte[] encryptedBytes = EncoderHelper.StringToByteBase64(message);
+        byte[] ivBytes = EncoderHelper.StringToByteBase64(iv);
         aes.IV = ivBytes;
-        byte[] decryptedBytes = SymmetricDecrypt(encryptedBytes, aes);
-        string decodedMessage = ByteToStringUtf(decryptedBytes);
+        byte[] decryptedBytes = EncoderHelper.SymmetricDecrypt(encryptedBytes, aes);
+        string decodedMessage = EncoderHelper.ByteToStringUtf(decryptedBytes);
         return decodedMessage;
     }
     
     static byte[] BuildResponse(string response, Aes key = null)
     {
         string headerProtocol = "GET PIZZA/1.1" + Eol;
-        string headerIv = "IV: " + ByteToStringBase64(key.IV) + Eol;
+        string headerIv = "IV: " + EncoderHelper.ByteToStringBase64(key.IV) + Eol;
         string headerMessage = "Message: ";
-        byte[] messageBytes = StringToByteUtf(response);
-        byte[] headerBytes = StringToByteUtf(headerProtocol + headerIv + headerMessage);
-        byte[] encryptedMessage = SymmetricEncrypt(messageBytes, key);
+        byte[] messageBytes = EncoderHelper.StringToByteUtf(response);
+        byte[] headerBytes = EncoderHelper.StringToByteUtf(headerProtocol + headerIv + headerMessage);
+        byte[] encryptedMessage = EncoderHelper.SymmetricEncrypt(messageBytes, key);
         
-        string basedMessage = ByteToStringBase64(encryptedMessage);
-        byte[] finalMessage = StringToByteUtf(basedMessage + Eot);
+        string basedMessage = EncoderHelper.ByteToStringBase64(encryptedMessage);
+        byte[] finalMessage = EncoderHelper.StringToByteUtf(basedMessage + Eot);
         byte[] bytesToSend = headerBytes.Concat(finalMessage).ToArray();
         return bytesToSend;
 
     }
     
-    static byte[] SymmetricEncrypt(byte[] message, Aes key)
+    public static void SetSymmetricKey(Aes key)
     {
-        return key.EncryptCbc(message, key.IV);
-    }
-    
-    static byte[] SymmetricDecrypt(byte[] message, Aes key)
-    {
-        return key.DecryptCbc(message, key.IV);
+        _symmetricKey = key;
     }
     
     static string DictionaryToString(Dictionary<string, int> dictionary)
