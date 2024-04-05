@@ -16,18 +16,8 @@ internal class PizzaServer
         TcpListener tcpListener = new TcpListener(IPAddress.Parse("127.0.0.1"),6789);
         tcpListener.Start();
         Console.WriteLine("server started");
-        
-        string path = @"..\..\..\keys.xml";
-        string xmlString = File.ReadAllText(path);
-        RSAParameters rsaParameters;
-        using (StringReader reader = new StringReader(xmlString))
-        {
-            XmlSerializer serializer = new XmlSerializer(typeof(RSAParameters));
-            rsaParameters = (RSAParameters)serializer.Deserialize(reader);
-        }
 
         var myRSA = new RSACryptoServiceProvider();
-        myRSA.ImportParameters(rsaParameters);
         string publicKeyXML = myRSA.ToXmlString(false);
         
         Console.WriteLine("Key Size: " + myRSA.KeySize);
@@ -61,37 +51,48 @@ internal class PizzaServer
                 Console.WriteLine("Request type = " + requestType);
 
                 byte[] response;
+                bool encrypted = false;
                 if (requestType == "request-public-key")
                 {
                     clientRSA.FromXmlString(ClientsPublicKey);
                     
-                    response = Encoding.ASCII.GetBytes("PIZZA/1.1 200 OK" + eol
+                    response = Encoding.UTF8.GetBytes("PIZZA/1.1 200 OK" + eol
                         + "public-key: " + publicKeyXML     
-                    + eol);    
+                    + eol);
+                    Console.WriteLine("MY-public-key: " + publicKeyXML);
+                    Console.WriteLine("Client-public-key: " + ClientsPublicKey);
                 }
                 else if (requestType == "pizza")
                 {
-                    response = Encoding.ASCII.GetBytes("PIZZA/1.1 400 OK" + eol
+                    response = Encoding.UTF8.GetBytes("PIZZA/1.1 400 OK" + eol
                          + "AYO WTF" 
                          + eol);
                     response = clientRSA.Encrypt(response, true);
+                    encrypted = true;
                     
                     byte[] decrypyed_message =
-                        myRSA.Decrypt(Encoding.ASCII.GetBytes(message), true);
+                        myRSA.Decrypt(Encoding.UTF8.GetBytes(message), true);
                     
                 }
                 else
                 {
-                    response = Encoding.ASCII.GetBytes("PIZZA/1.1 400 OK" + eol
+                    response = Encoding.UTF8.GetBytes("PIZZA/1.1 400 OK" + eol
                         + "AYO WTF"
                         + eol);
                     response = clientRSA.Encrypt(response, true);
+                    encrypted = true;
                 }
-                
-                
-                
-                String responseStr = Encoding.ASCII.GetString(response);
-                Console.WriteLine("resSize: " + responseStr.Length);
+
+
+
+                if (encrypted){
+                    String responseStr = Encoding.UTF8.GetString(response);
+                    Console.WriteLine("resSize: " + response.Length);
+                    // String decodedRESP = Encoding.UTF8.GetString(myRSA.Decrypt(response, true));
+                    Console.WriteLine("res: " + responseStr);
+                    string hex = BitConverter.ToString(response);
+                    Console.WriteLine("Hex: " + hex);
+                }
 
                 stream.Write(response, 0, response.Length);
             } else {
