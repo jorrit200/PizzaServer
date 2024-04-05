@@ -9,7 +9,8 @@ public interface ISocketObserver
 
 public interface ISocketObserverRequireRsa : ISocketObserver
 {
-    void Update(string requestType, string data, NetworkStream stream, RSACryptoServiceProvider rsa);
+    void Update(string requestType, string data, NetworkStream stream, RSACryptoServiceProvider rsa,
+        TcpSubjectServer server);
 }
 
 public interface ISocketObserverRequireAes : ISocketObserver

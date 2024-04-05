@@ -37,7 +37,7 @@ public class TcpSubjectServer(int port) : ISocketSubject
 
             stream.Read(bytes, 0, bytes.Length);
 
-            String data = EncoderHelper.ByteToStringUtf(bytes);
+            String data = EncodingHelper.ByteToStringUtf(bytes);
 
             if (Regex.IsMatch(data, "^GET"))
             {
@@ -67,6 +67,7 @@ public class TcpSubjectServer(int port) : ISocketSubject
 
     public void Notify(string requestType, string message, NetworkStream stream)
     {
+        Console.WriteLine("Notifying observers: " + requestType);
         if (observers.TryGetValue(requestType, out var RequestedObservers))
         {
             foreach (var observer in RequestedObservers)
@@ -77,7 +78,7 @@ public class TcpSubjectServer(int port) : ISocketSubject
                     {
                         throw new Exception("RSA is required for this observer");
                     }
-                    requireRsa.Update(requestType, message, stream, _rsa);
+                    requireRsa.Update(requestType, message, stream, _rsa, this);
                 }
                 else if (observer is ISocketObserverRequireAes requireAes)
                 {
@@ -97,5 +98,10 @@ public class TcpSubjectServer(int port) : ISocketSubject
         {
             Console.WriteLine("No observers for this request type");
         }
+    }
+    
+    public void SetAes(Aes aes)
+    {
+        _aes = aes;
     }
 }
