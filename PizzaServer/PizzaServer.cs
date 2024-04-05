@@ -44,11 +44,17 @@ internal class PizzaServer
             if (Regex.IsMatch(data, "^GET")) {
                 Console.WriteLine("We are getting a GET request");
                 const string eol = "\r\n";
+                const string eot = "EOT;";
                 string requestType = new Regex("Type: (.*)").Match(data).Groups[1].Value.Trim();
-                string message = new Regex("Message: (.*)").Match(data).Groups[1].Value.Trim();
+                string content = new Regex("Message: (.*)").Match(data).Groups[1].Value.Trim();
                 string ClientsPublicKey = new Regex("Public-key: (.*)").Match(data).Groups[1].Value.Trim();
                 
+                string message = content.Split(eot)[0];
+                string digsig = content.Split(eot)[1];
+                
                 Console.WriteLine("Request type = " + requestType);
+                Console.WriteLine("Message: " + message);
+                Console.WriteLine("Digsig: " + digsig);
 
                 byte[] response;
                 bool encrypted = false;
@@ -65,7 +71,7 @@ internal class PizzaServer
                 else if (requestType == "pizza")
                 {
                     response = Encoding.UTF8.GetBytes("PIZZA/1.1 400 OK" + eol
-                         + "AYO WTF" 
+                         + "this guy gets no bitches" 
                          + eol);
                     response = clientRSA.Encrypt(response, true);
                     encrypted = true;
