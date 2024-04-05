@@ -11,6 +11,9 @@ namespace PizzaServer;
 
 internal class PizzaServer
 {
+    
+    const string eol = "\r\n";
+    const string eot = "EOT;";
     public static void Main(string[] args)
     {
         TcpListener tcpListener = new TcpListener(IPAddress.Parse("127.0.0.1"),6789);
@@ -43,8 +46,7 @@ internal class PizzaServer
             
             if (Regex.IsMatch(data, "^GET")) {
                 Console.WriteLine("We are getting a GET request");
-                const string eol = "\r\n";
-                const string eot = "EOT;";
+
                 Console.WriteLine(data);
                 string requestType = new Regex("Type: (.*)").Match(data).Groups[1].Value.Trim();
                 string message = new Regex("Message: (.*)").Match(data).Groups[1].Value.Trim();
@@ -64,10 +66,7 @@ internal class PizzaServer
                 }
                 else if (requestType == "pizza")
                 {
-                    response = StringToByteUtf("PIZZA/1.1 400 OK" + eol
-                                                               + "this guy gets no bitches" 
-                                                               + eol);
-                    response = clientRSA.Encrypt(response, true);
+                    response = buildResponse("now you're speaking my language", clientRSA);
                     encrypted = true;
 
                     byte[] byte_array = StringToByteBase64(message);
@@ -84,8 +83,6 @@ internal class PizzaServer
                     response = StringToByteUtf("PIZZA/1.1 400 OK" + eol
                                                                + "AYO WTF"
                                                                + eol);
-                    response = clientRSA.Encrypt(response, true);
-                    encrypted = true;
                 }
 
 
@@ -124,5 +121,21 @@ internal class PizzaServer
     static string ByteToStringUtf(byte[] bytes)
     {
         return Encoding.UTF8.GetString(bytes);
+    }
+    
+    static byte[] buildResponse(string response, RSACryptoServiceProvider rsa = null)
+    {
+        string header_protocol = "GET PIZZA/1.1" + eol;
+        string header_message = "Message: ";
+        string digsig = "its me btw";
+        
+        byte[] message_bytes = StringToByteUtf(response + eot + digsig);
+        byte[] header_bytes = StringToByteUtf(header_protocol + header_message);
+        byte[] encrypted_message = rsa.Encrypt(message_bytes, true);
+        string based_message = ByteToStringBase64(encrypted_message);
+        byte[] final_message = StringToByteUtf(based_message);
+        byte[] bytes_to_send = header_bytes.Concat(final_message).ToArray();
+        return bytes_to_send;
+
     }
 }
