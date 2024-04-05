@@ -120,10 +120,12 @@ internal class PizzaServer
     static byte[] BuildResponse(string response, Aes key = null)
     {
         string header_protocol = "GET PIZZA/1.1" + eol;
+        string header_IV = "IV: " + key.IV + eol;
         string header_message = "Message: ";
         byte[] message_bytes = StringToByteUtf(response);
-        byte[] header_bytes = StringToByteUtf(header_protocol + header_message);
+        byte[] header_bytes = StringToByteUtf(header_protocol + header_IV + header_message);
         byte[] encrypted_message = SymmetricEncrypt(message_bytes, key);
+        
         string based_message = ByteToStringBase64(encrypted_message);
         byte[] final_message = StringToByteUtf(based_message + eot);
         byte[] bytes_to_send = header_bytes.Concat(final_message).ToArray();
