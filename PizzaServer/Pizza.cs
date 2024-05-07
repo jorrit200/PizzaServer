@@ -2,16 +2,16 @@
 
 public class Pizza
 {
-    private string Name;
-    private int Price;
-    private List<string> Toppings; 
+    private string _name;
+    private int _price;
+    private readonly List<string> _toppings; 
     public Pizza(string name, Dictionary<string, int> fromMenu)
     {
-        if (fromMenu.ContainsKey(name))
+        if (fromMenu.TryGetValue(name, out var value))
         {
-            Name = name;
-            Price = fromMenu[name];
-            Toppings = new List<string>();
+            _name = name;
+            _price = value;
+            _toppings = new List<string>();
         }
         else
         {
@@ -24,8 +24,8 @@ public class Pizza
     {
         if (fromMenu.TryGetValue(topping, out var value))
         {
-            Toppings.Add(topping);
-            Price += value;
+            _toppings.Add(topping);
+            _price += value;
             return this;
         }
         throw new ArgumentException("Topping not found on menu");
@@ -33,7 +33,7 @@ public class Pizza
     
     public int GetPrice()
     {
-        return Price;
+        return _price;
     }
     
 }

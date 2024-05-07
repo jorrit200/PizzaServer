@@ -41,9 +41,10 @@ public class TcpSubjectServer(int port) : ISocketSubject
 
             if (Regex.IsMatch(data, "^GET"))
             {
+                var tcpResponse = new TcpResponse(stream);
                 Console.WriteLine("We are getting a GET request");
                 string requestType = new Regex("Type: (.*)").Match(data).Groups[1].Value.Trim();
-                Notify(requestType, data, stream);
+                Notify(requestType, data, tcpResponse);
             }
         }
     }
@@ -65,7 +66,7 @@ public class TcpSubjectServer(int port) : ISocketSubject
         }
     }
 
-    public void Notify(string requestType, string message, NetworkStream stream)
+    public void Notify(string requestType, string message, IResponse response)
     {
         Console.WriteLine("Notifying observers: " + requestType);
         if (observers.TryGetValue(requestType, out var RequestedObservers))
@@ -78,7 +79,7 @@ public class TcpSubjectServer(int port) : ISocketSubject
                     {
                         throw new Exception("RSA is required for this observer");
                     }
-                    requireRsa.Update(requestType, message, stream, _rsa, this);
+                    requireRsa.Update(requestType, message, response, _rsa, this);
                 }
                 else if (observer is ISocketObserverRequireAes requireAes)
                 {
@@ -86,11 +87,11 @@ public class TcpSubjectServer(int port) : ISocketSubject
                     {
                         throw new Exception("AES is required for this observer");
                     }
-                    requireAes.Update(requestType, message, stream, _aes);
+                    requireAes.Update(requestType, message, response, _aes);
                 }
                 else
                 {
-                    observer.Update(requestType, message, stream);
+                    observer.Update(requestType, message, response);
                 }
             }
         }

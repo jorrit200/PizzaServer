@@ -6,7 +6,7 @@ namespace PizzaServer;
 
 public class KeyExchangeObserver: ISocketObserverRequireRsa
 {
-    public void Update(string requestType, string data, NetworkStream stream, RSACryptoServiceProvider rsa, TcpSubjectServer server)
+    public void Update(string requestType, string data, IResponse response, RSACryptoServiceProvider rsa, TcpSubjectServer server)
     {
         string clientsPublicKey = new Regex("Public-key: (.*)").Match(data).Groups[1].Value.Trim();
         
@@ -19,15 +19,15 @@ public class KeyExchangeObserver: ISocketObserverRequireRsa
         PizzaServer.SetSymmetricKey(symmetricKey);
         
         var encryptedSymmetricKey = clientRsa.Encrypt(symmetricKey.Key, true);
-        byte[] response = EncodingHelper.StringToByteUtf("PIZZA/1.1 200 OK" + PizzaServer.Eol
+        byte[] responseMessage = EncodingHelper.StringToByteUtf("PIZZA/1.1 200 OK" + PizzaServer.Eol
           + "public-key: " + rsa.ToXmlString(false) + PizzaServer.Eol
           + "symmetric-key: " +
           EncodingHelper.ByteToStringBase64(encryptedSymmetricKey) + PizzaServer.Eot);
         
-        stream.Write(response, 0, response.Length);
+        response.Send(responseMessage);
     }
 
-    public void Update(string requestType, string data, NetworkStream stream)
+    public void Update(string requestType, string data, IResponse response)
     {
         throw new Exception("I need RSA to work!");
     }

@@ -12,12 +12,12 @@ public class MenuObserver: ISocketObserverRequireAes
         _menu = menu;
     }
     
-    public void Update(string requestType, string data, NetworkStream stream, Aes aes)
+    public void Update(string requestType, string data, IResponse response, Aes aes)
     {
         throw new NotImplementedException();
     }
     
-    public void Update(string requestType, string data, NetworkStream stream)
+    public void Update(string requestType, string data, IResponse response)
     {
         throw new Exception("I need AES to work!");
     }
