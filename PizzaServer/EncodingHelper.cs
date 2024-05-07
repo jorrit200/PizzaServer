@@ -1,10 +1,5 @@
-﻿using System.Text;
-using System.Text.RegularExpressions;   
-using System.Net;
-using System.Security.Cryptography;
-using System.Xml;
-using System.Xml.Serialization;
-using System.Net.Sockets;
+﻿using System.Security.Cryptography;
+using System.Text;
 
 namespace PizzaServer;
 
@@ -30,9 +25,9 @@ public class EncodingHelper
         return Encoding.UTF8.GetString(bytes);
     }
     
-    public static Aes GenerateSymmetricKey()
+    public static Aes? GenerateSymmetricKey()
     {
-        Aes aes = Aes.Create();
+        Aes? aes = Aes.Create();
         aes.GenerateKey();
         return aes;
     }
@@ -49,27 +44,27 @@ public class EncodingHelper
     
     public static string DecodeMessage(string message, Aes aes, string iv)
     {
-        byte[] encryptedBytes = EncodingHelper.StringToByteBase64(message);
-        byte[] ivBytes = EncodingHelper.StringToByteBase64(iv);
+        byte[] encryptedBytes = StringToByteBase64(message);
+        byte[] ivBytes = StringToByteBase64(iv);
         Console.WriteLine(BitConverter.ToString(ivBytes));
         Console.WriteLine(BitConverter.ToString(aes.IV));
         aes.IV = ivBytes;
-        byte[] decryptedBytes = EncodingHelper.SymmetricDecrypt(encryptedBytes, aes);
-        string decodedMessage = EncodingHelper.ByteToStringUtf(decryptedBytes);
+        byte[] decryptedBytes = SymmetricDecrypt(encryptedBytes, aes);
+        string decodedMessage = ByteToStringUtf(decryptedBytes);
         return decodedMessage;
     }
     
-    public static byte[] BuildResponse(string response, Aes key = null)
+    public static byte[] BuildResponse(string response, Aes key)
     {
         string headerProtocol = "GET PIZZA/1.1" + PizzaServer.Eol;
-        string headerIv = "IV: " + EncodingHelper.ByteToStringBase64(key.IV) + PizzaServer.Eol;
+        string headerIv = "IV: " + ByteToStringBase64(key.IV) + PizzaServer.Eol;
         string headerMessage = "Message: ";
-        byte[] messageBytes = EncodingHelper.StringToByteUtf(response);
-        byte[] headerBytes = EncodingHelper.StringToByteUtf(headerProtocol + headerIv + headerMessage);
-        byte[] encryptedMessage = EncodingHelper.SymmetricEncrypt(messageBytes, key);
+        byte[] messageBytes = StringToByteUtf(response);
+        byte[] headerBytes = StringToByteUtf(headerProtocol + headerIv + headerMessage);
+        byte[] encryptedMessage = SymmetricEncrypt(messageBytes, key);
         
-        string basedMessage = EncodingHelper.ByteToStringBase64(encryptedMessage);
-        byte[] finalMessage = EncodingHelper.StringToByteUtf(basedMessage + PizzaServer.Eot);
+        string basedMessage = ByteToStringBase64(encryptedMessage);
+        byte[] finalMessage = StringToByteUtf(basedMessage + PizzaServer.Eot);
         byte[] bytesToSend = headerBytes.Concat(finalMessage).ToArray();
         return bytesToSend;
 

@@ -1,7 +1,9 @@
-﻿using System.Net.Sockets;
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
+using PizzaServer.Responses;
+using PizzaServer;
+using PizzaServer.Observers;
 
-namespace PizzaServer;
+namespace PizzaServer.Observers;
 
 public class MenuObserver: ISocketObserverRequireAes
 {
@@ -12,7 +14,7 @@ public class MenuObserver: ISocketObserverRequireAes
         _menu = menu;
     }
     
-    public void Update(string requestType, string data, IResponse response, Aes aes)
+    public void Update(string requestType, string data, IResponse response, Aes? aes)
     {
         throw new NotImplementedException();
     }

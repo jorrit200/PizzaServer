@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 
-namespace PizzaServer;
+namespace PizzaServer.Responses;
 
 public class UdpResponse(UdpClient udpClient, IPEndPoint responseIp) : IResponse
 {

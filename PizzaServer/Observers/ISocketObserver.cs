@@ -1,7 +1,7 @@
-﻿using System.Net.Sockets;
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
+using PizzaServer.Responses;
 
-namespace PizzaServer;
+namespace PizzaServer.Observers;
 public interface ISocketObserver
 {
     void Update(string requestType, string data, IResponse response);
@@ -10,7 +10,7 @@ public interface ISocketObserver
 public interface ISocketObserverRequireRsa : ISocketObserver
 {
     void Update(string requestType, string data, IResponse response, RSACryptoServiceProvider rsa,
-        TcpSubjectServer server);
+        IHaveAes server);
 }
 
 public interface ISocketObserverRequireAes : ISocketObserver

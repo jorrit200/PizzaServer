@@ -1,22 +1,20 @@
-﻿using System.Net.Sockets;
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Text.RegularExpressions;
+using PizzaServer.Responses;
 
-namespace PizzaServer;
+namespace PizzaServer.Observers;
 
 public class KeyExchangeObserver: ISocketObserverRequireRsa
 {
-    public void Update(string requestType, string data, IResponse response, RSACryptoServiceProvider rsa, TcpSubjectServer server)
+    public void Update(string requestType, string data, IResponse response, RSACryptoServiceProvider rsa, IHaveAes server)
     {
         string clientsPublicKey = new Regex("Public-key: (.*)").Match(data).Groups[1].Value.Trim();
         
         RSACryptoServiceProvider clientRsa = new RSACryptoServiceProvider();
         clientRsa.FromXmlString(clientsPublicKey);
-        Aes symmetricKey = EncodingHelper.GenerateSymmetricKey();
+        Aes? symmetricKey = EncodingHelper.GenerateSymmetricKey();
         server.SetAes(symmetricKey);
         symmetricKey.GenerateIV();
-        
-        PizzaServer.SetSymmetricKey(symmetricKey);
         
         var encryptedSymmetricKey = clientRsa.Encrypt(symmetricKey.Key, true);
         byte[] responseMessage = EncodingHelper.StringToByteUtf("PIZZA/1.1 200 OK" + PizzaServer.Eol

@@ -1,4 +1,4 @@
-﻿namespace PizzaServer;
+﻿namespace PizzaServer.Responses;
 
 public interface IResponse
 {

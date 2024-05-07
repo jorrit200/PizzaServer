@@ -1,6 +1,6 @@
 ﻿using System.Net.Sockets;
 
-namespace PizzaServer;
+namespace PizzaServer.Responses;
 
 public class TcpResponse(NetworkStream stream) : IResponse
 {

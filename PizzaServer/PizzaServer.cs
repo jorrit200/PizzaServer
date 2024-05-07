@@ -1,29 +1,22 @@
-﻿// See https://aka.ms/new-console-template for more information
-using System.Text;
-using System.Text.RegularExpressions;   
-using System.Net;
-using System.Security.Cryptography;
-using System.Xml;
-using System.Xml.Serialization;
-using System.Net.Sockets;
+﻿using PizzaServer.Observers;
+using PizzaServer.Servers;
 
 namespace PizzaServer;
-internal class PizzaServer
+internal static class PizzaServer
 {
     public const string Eol = "\r\n";
     public const string Eot = "EOT;";
-    private static Aes _symmetricKey;
-    private static string protocol = "TCP";
-    
-    
-    private static readonly Dictionary<string, int> _menu = new()
+    private const string Protocol = "UDP";
+
+
+    private static readonly Dictionary<string, int> Menu = new()
     {
         { "Margherita", 1000 },
         { "Tonno", 1250 },
         { "Calzone", 1300 }
     };
 
-    private static readonly Dictionary<string, int> _toppings = new()
+    private static readonly Dictionary<string, int> Toppings = new()
     {
         { "Mozzarella", 50 },
         { "Parmezaan", 50 },
@@ -72,73 +65,23 @@ internal class PizzaServer
     
     public static void Main(string[] args)
     {
-        Pizza pizza = new Pizza("Margherita", _menu).WithTopping("Tabasco", _toppings)
-            .WithTopping("Mozzarella", _toppings);
-        Console.WriteLine(pizza.GetPrice());
-        
-        TcpListener tcpListener = new TcpListener(IPAddress.Parse("127.0.0.1"),6789);
-        
-
-        var myRsa = new RSACryptoServiceProvider();
-        string publicKeyXml = myRsa.ToXmlString(false);
-        
-        var clientRsa = new RSACryptoServiceProvider();
-
-
-        if (protocol == "TCP")
+        if (Protocol == "TCP")
         {
             TcpSubjectServer tcpSubjectServer = new TcpSubjectServer(6789);
             tcpSubjectServer.Attach(new KeyExchangeObserver(), "request-symmetric-key");
-            tcpSubjectServer.Attach(new PizzaObserver(_menu, _toppings), "pizza");
-            tcpSubjectServer.Attach(new MenuObserver(_menu), "menu");
+            tcpSubjectServer.Attach(new PizzaObserver(Menu, Toppings), "pizza");
+            tcpSubjectServer.Attach(new MenuObserver(Menu), "menu");
 
 
             tcpSubjectServer.Start();
         }
         else
         {
-            Console.WriteLine("UDP");
-            UdpClient udpClient = new UdpClient(6789);
-            IPEndPoint remoteIpEndPoint = new IPEndPoint(IPAddress.Any, 0);
-            while (true)
-            {
-                byte[] receivedBytes = udpClient.Receive(ref remoteIpEndPoint);
-                string receivedData = EncodingHelper.ByteToStringUtf(receivedBytes);
-                Console.WriteLine(receivedData);
-                if (Regex.IsMatch(receivedData, "^GET"))
-                {
-                    string requestType = new Regex("Type: (.*)").Match(receivedData).Groups[1].Value.Trim();
-                    string message = new Regex("Message: (.*)").Match(receivedData).Groups[1].Value.Trim();
-                    string clientsPublicKey = new Regex("Public-key: (.*)").Match(receivedData).Groups[1].Value.Trim();
-                    string clientsIv = new Regex("IV: (.*)").Match(receivedData).Groups[1].Value.Trim();
-
-                    byte[] response;
-                    bool encrypted = false;
-                    if (requestType == "request-public-key")
-                    {
-                        clientRsa.FromXmlString(clientsPublicKey);
-                        _symmetricKey = EncodingHelper.GenerateSymmetricKey();
-                        _symmetricKey.GenerateIV();
-
-                        Console.WriteLine(BitConverter.ToString(_symmetricKey.Key));
-
-                        var encryptedSymmetricKey = clientRsa.Encrypt(_symmetricKey.Key, true);
-                        
-                        response = EncodingHelper.StringToByteUtf("PIZZA/1.1 200 OK" + Eol
-                          + "public-key: " + publicKeyXml + Eol
-                          + "symmetric-key: " +
-                          EncodingHelper.ByteToStringBase64(encryptedSymmetricKey) + Eot);
-                        udpClient.Send(response, response.Length, remoteIpEndPoint);
-
-                    }
-                }
-            }
+            UdpSubjectServer udpSubjectServer = new UdpSubjectServer(6789);
+            udpSubjectServer.Attach(new KeyExchangeObserver(), "request-symmetric-key");
+            udpSubjectServer.Attach(new PizzaObserver(Menu, Toppings), "pizza");
+            udpSubjectServer.Attach(new MenuObserver(Menu), "menu");
+            udpSubjectServer.Start();
         }
     }
-    
-    public static void SetSymmetricKey(Aes key)
-    {
-        _symmetricKey = key;
-    }
-
 }

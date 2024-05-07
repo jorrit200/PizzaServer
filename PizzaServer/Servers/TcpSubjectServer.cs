@@ -1,22 +1,18 @@
-﻿using System.Text.RegularExpressions;   
-using System.Net;
-using System.Security.Cryptography;
-using System.Xml;
-using System.Xml.Serialization;
+﻿using System.Net;
 using System.Net.Sockets;
+using System.Security.Cryptography;
+using System.Text.RegularExpressions;
+using PizzaServer.Responses;
+using PizzaServer.Observers;
 
-namespace PizzaServer;
+namespace PizzaServer.Servers;
 
-public class TcpSubjectServer(int port) : ISocketSubject
+public class TcpSubjectServer(int port) : ISocketSubject, IHaveAes
 {
-    readonly int port = port;
-    private TcpListener _tcpListener = new(IPAddress.Parse("127.0.0.1"), port);
-    private RSACryptoServiceProvider _rsa = new();
-    private RSACryptoServiceProvider _clientRsa;
-    private Aes _aes;
-    private bool _clientConnected = false;
-    private bool _clientKeyRecieved = false;
-    private Dictionary<string, List<ISocketObserver>> observers = new();
+    private readonly TcpListener _tcpListener = new(IPAddress.Parse("127.0.0.1"), port);
+    private readonly RSACryptoServiceProvider _rsa = new();
+    private Aes? _aes = null!;
+    private readonly Dictionary<string, List<ISocketObserver>> _observers = new();
 
     public void Start()
     {
@@ -35,6 +31,7 @@ public class TcpSubjectServer(int port) : ISocketSubject
 
             byte[] bytes = new byte[tcpClient.Available];
 
+            // ReSharper disable once MustUseReturnValue
             stream.Read(bytes, 0, bytes.Length);
 
             String data = EncodingHelper.ByteToStringUtf(bytes);
@@ -47,31 +44,32 @@ public class TcpSubjectServer(int port) : ISocketSubject
                 Notify(requestType, data, tcpResponse);
             }
         }
+        // ReSharper disable once FunctionNeverReturns
     }
 
     public void Attach(ISocketObserver socketObserver, string requestType)
     {
-        if (!observers.ContainsKey(requestType))
+        if (!_observers.ContainsKey(requestType))
         {
-            observers[requestType] = new List<ISocketObserver>();
+            _observers[requestType] = new List<ISocketObserver>();
         }
-        observers[requestType].Add(socketObserver);
+        _observers[requestType].Add(socketObserver);
     }
 
     public void Detach(ISocketObserver socketObserver, string requestType)
     {
-        if (observers.ContainsKey(requestType))
+        if (_observers.TryGetValue(requestType, out var observer))
         {
-            observers[requestType].Remove(socketObserver);
+            observer.Remove(socketObserver);
         }
     }
 
     public void Notify(string requestType, string message, IResponse response)
     {
         Console.WriteLine("Notifying observers: " + requestType);
-        if (observers.TryGetValue(requestType, out var RequestedObservers))
+        if (_observers.TryGetValue(requestType, out var requestedObservers))
         {
-            foreach (var observer in RequestedObservers)
+            foreach (var observer in requestedObservers)
             {
                 if (observer is ISocketObserverRequireRsa requireRsa)
                 {
@@ -101,7 +99,7 @@ public class TcpSubjectServer(int port) : ISocketSubject
         }
     }
     
-    public void SetAes(Aes aes)
+    public void SetAes(Aes? aes)
     {
         _aes = aes;
     }
