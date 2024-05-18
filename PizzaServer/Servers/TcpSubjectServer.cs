@@ -7,7 +7,7 @@ using PizzaServer.Observers;
 
 namespace PizzaServer.Servers;
 
-public class TcpSubjectServer(int port) : ISocketSubject, IHaveAes
+public class TcpSubjectServer(int port) : IServerSubject, IHaveAes
 {
     private readonly TcpListener _tcpListener = new(IPAddress.Parse("127.0.0.1"), port);
     private readonly RSACryptoServiceProvider _rsa = new();
@@ -19,9 +19,9 @@ public class TcpSubjectServer(int port) : ISocketSubject, IHaveAes
         Console.WriteLine(_rsa);
         _tcpListener.Start();
         Console.WriteLine("server started");
-        TcpClient tcpClient = _tcpListener.AcceptTcpClient();
+        var tcpClient = _tcpListener.AcceptTcpClient();
         Console.WriteLine("client connected");
-        NetworkStream stream = tcpClient.GetStream();
+        var stream = tcpClient.GetStream();
 
         while (true)
         {
@@ -29,20 +29,18 @@ public class TcpSubjectServer(int port) : ISocketSubject, IHaveAes
             {
             }
 
-            byte[] bytes = new byte[tcpClient.Available];
+            var bytes = new byte[tcpClient.Available];
 
             // ReSharper disable once MustUseReturnValue
             stream.Read(bytes, 0, bytes.Length);
 
             String data = EncodingHelper.ByteToStringUtf(bytes);
 
-            if (Regex.IsMatch(data, "^GET"))
-            {
-                var tcpResponse = new TcpResponse(stream);
-                Console.WriteLine("We are getting a GET request");
-                string requestType = new Regex("Type: (.*)").Match(data).Groups[1].Value.Trim();
-                Notify(requestType, data, tcpResponse);
-            }
+            if (!Regex.IsMatch(data, "^GET")) continue;
+            var tcpResponse = new TcpResponse(stream);
+            Console.WriteLine("We are getting a GET request");
+            string requestType = new Regex("Type: (.*)").Match(data).Groups[1].Value.Trim();
+            Notify(requestType, data, tcpResponse);
         }
         // ReSharper disable once FunctionNeverReturns
     }

@@ -7,7 +7,7 @@ using PizzaServer.Observers;
 
 namespace PizzaServer.Servers;
 
-public class UdpSubjectServer(int port): ISocketSubject, IHaveAes
+public partial class UdpSubjectServer(int port): IServerSubject, IHaveAes
 {
     private readonly UdpClient _udpClient = new(port);
     private IPEndPoint _endPoint = new(IPAddress.Any, 0);
@@ -22,14 +22,12 @@ public class UdpSubjectServer(int port): ISocketSubject, IHaveAes
     {
         while (true)
         {
-            byte[] receivedBytes = _udpClient.Receive(ref _endPoint);
-            String receivedData = EncodingHelper.ByteToStringUtf(receivedBytes);
-            if (Regex.IsMatch(receivedData, "^GET"))
-            {
-                string requestType = new Regex("Type: (.*)").Match(receivedData).Groups[1].Value.Trim();
-                UdpResponse udpResponse = new UdpResponse(_udpClient, _endPoint);
-                Notify(requestType, receivedData, udpResponse);
-            }
+            var receivedBytes = _udpClient.Receive(ref _endPoint);
+            var receivedData = EncodingHelper.ByteToStringUtf(receivedBytes);
+            if (!Regex.IsMatch(receivedData, "^GET")) continue;
+            var requestType = MyRegex().Match(receivedData).Groups[1].Value.Trim();
+            var udpResponse = new UdpResponse(_udpClient, _endPoint);
+            Notify(requestType, receivedData, udpResponse);
         }
         // ReSharper disable once FunctionNeverReturns
     }
@@ -38,7 +36,7 @@ public class UdpSubjectServer(int port): ISocketSubject, IHaveAes
     {
         if (!_observers.ContainsKey(requestType))
         {
-            _observers[requestType] = new List<ISocketObserver>();
+            _observers[requestType] = [];
         }
         _observers[requestType].Add(socketObserver);
     }
@@ -53,30 +51,26 @@ public class UdpSubjectServer(int port): ISocketSubject, IHaveAes
 
     public void Notify(string requestType, string message, IResponse response)
     {
-        Console.WriteLine("Notifying observers: " + requestType);
+        Console.WriteLine($"Notifying observers: {requestType}");
         if (_observers.TryGetValue(requestType, out var requestedObservers))
         {
             foreach (var observer in requestedObservers)
             {
-                if (observer is ISocketObserverRequireRsa requireRsa)
+                switch (observer)
                 {
-                    if (_rsa == null)
-                    {
+                    case ISocketObserverRequireRsa requireRsa when _rsa == null:
                         throw new Exception("RSA is required for this observer");
-                    }
-                    requireRsa.Update(requestType, message, response, _rsa, this);
-                }
-                else if (observer is ISocketObserverRequireAes requireAes)
-                {
-                    if (_aes == null)
-                    {
+                    case ISocketObserverRequireRsa requireRsa:
+                        requireRsa.Update(requestType, message, response, _rsa, this);
+                        break;
+                    case ISocketObserverRequireAes requireAes when _aes == null:
                         throw new Exception("AES is required for this observer");
-                    }
-                    requireAes.Update(requestType, message, response, _aes);
-                }
-                else
-                {
-                    observer.Update(requestType, message, response);
+                    case ISocketObserverRequireAes requireAes:
+                        requireAes.Update(requestType, message, response, _aes);
+                        break;
+                    default:
+                        observer.Update(requestType, message, response);
+                        break;
                 }
             }
         }
@@ -90,4 +84,7 @@ public class UdpSubjectServer(int port): ISocketSubject, IHaveAes
     {
         _aes = aes;
     }
+
+    [GeneratedRegex("Type: (.*)")]
+    private static partial Regex MyRegex();
 }

@@ -6,7 +6,9 @@ internal static class PizzaServer
 {
     public const string Eol = "\r\n";
     public const string Eot = "EOT;";
+    
     private const string Protocol = "UDP";
+    private const int Port = 6789;
 
 
     private static readonly Dictionary<string, int> Menu = new()
@@ -65,23 +67,12 @@ internal static class PizzaServer
     
     public static void Main(string[] args)
     {
-        if (Protocol == "TCP")
-        {
-            TcpSubjectServer tcpSubjectServer = new TcpSubjectServer(6789);
-            tcpSubjectServer.Attach(new KeyExchangeObserver(), "request-symmetric-key");
-            tcpSubjectServer.Attach(new PizzaObserver(Menu, Toppings), "pizza");
-            tcpSubjectServer.Attach(new MenuObserver(Menu), "menu");
-
-
-            tcpSubjectServer.Start();
-        }
-        else
-        {
-            UdpSubjectServer udpSubjectServer = new UdpSubjectServer(6789);
-            udpSubjectServer.Attach(new KeyExchangeObserver(), "request-symmetric-key");
-            udpSubjectServer.Attach(new PizzaObserver(Menu, Toppings), "pizza");
-            udpSubjectServer.Attach(new MenuObserver(Menu), "menu");
-            udpSubjectServer.Start();
-        }
+        IServerSubject subjectServer = Protocol == "TCP" ? new TcpSubjectServer(Port) : new UdpSubjectServer(Port);
+        
+        subjectServer = new UdpSubjectServer(6789);
+        subjectServer.Attach(new KeyExchangeObserver(), "request-symmetric-key");
+        subjectServer.Attach(new PizzaObserver(Menu, Toppings), "pizza");
+        subjectServer.Attach(new MenuObserver(Menu), "menu");
+        subjectServer.Start();
     }
 }
