@@ -61,15 +61,15 @@ public partial class UdpSubjectServer(int port): IServerSubject, IHaveAes
                     case ISocketObserverRequireRsa requireRsa when _rsa == null:
                         throw new Exception("RSA is required for this observer");
                     case ISocketObserverRequireRsa requireRsa:
-                        requireRsa.Update(requestType, message, response, _rsa, this);
+                        requireRsa.Update(message, response, _rsa, this);
                         break;
                     case ISocketObserverRequireAes requireAes when _aes == null:
                         throw new Exception("AES is required for this observer");
                     case ISocketObserverRequireAes requireAes:
-                        requireAes.Update(requestType, message, response, _aes);
+                        requireAes.Update(message, response, _aes);
                         break;
                     default:
-                        observer.Update(requestType, message, response);
+                        observer.Update(message, response);
                         break;
                 }
             }

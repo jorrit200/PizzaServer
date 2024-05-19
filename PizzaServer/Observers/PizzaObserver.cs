@@ -4,6 +4,9 @@ using PizzaServer.Responses;
 
 namespace PizzaServer.Observers;
 
+/// <summary>
+/// Handles the ordering of a pizza
+/// </summary>
 public class PizzaObserver: ISocketObserverRequireAes
 {
     private static Dictionary<string, int> _menu = new();
@@ -14,7 +17,7 @@ public class PizzaObserver: ISocketObserverRequireAes
         _toppings = toppings;
     }
 
-    public void Update(string requestType, string data, IResponse response, Aes aes)
+    public void Update(string data, IResponse response, Aes aes)
     {
         string message = new Regex("Message: (.*)").Match(data).Groups[1].Value.Trim();
         string clientsIv = new Regex("IV: (.*)").Match(data).Groups[1].Value.Trim();
@@ -28,7 +31,7 @@ public class PizzaObserver: ISocketObserverRequireAes
         
     }
 
-    public void Update(string requestType, string data, IResponse response)
+    public void Update(string data, IResponse response)
     {
         throw new Exception("I require AES to work!");
     }

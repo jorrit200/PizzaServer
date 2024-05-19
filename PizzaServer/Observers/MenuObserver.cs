@@ -5,6 +5,9 @@ using PizzaServer.Observers;
 
 namespace PizzaServer.Observers;
 
+/// <summary>
+/// Sends a menu with available pizzas
+/// </summary>
 public class MenuObserver: ISocketObserverRequireAes
 {
     private static Dictionary<string, int> _menu = new();
@@ -14,12 +17,12 @@ public class MenuObserver: ISocketObserverRequireAes
         _menu = menu;
     }
     
-    public void Update(string requestType, string data, IResponse response, Aes? aes)
+    public void Update(string data, IResponse response, Aes? aes)
     {
         throw new NotImplementedException();
     }
     
-    public void Update(string requestType, string data, IResponse response)
+    public void Update(string data, IResponse response)
     {
         throw new Exception("I need AES to work!");
     }

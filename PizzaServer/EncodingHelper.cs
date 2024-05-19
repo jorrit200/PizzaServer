@@ -3,7 +3,11 @@ using System.Text;
 
 namespace PizzaServer;
 
-public class EncodingHelper
+/// <summary>
+/// Encoding and decoding messsages to various models is what this class is for.
+/// Also helps with encryption and message builing.
+/// </summary>
+public static class EncodingHelper
 {
     public static byte[] StringToByteBase64(string stringToEncode)
     {
@@ -25,9 +29,9 @@ public class EncodingHelper
         return Encoding.UTF8.GetString(bytes);
     }
     
-    public static Aes? GenerateSymmetricKey()
+    public static Aes GenerateSymmetricKey()
     {
-        Aes? aes = Aes.Create();
+        var aes = Aes.Create();
         aes.GenerateKey();
         return aes;
     }
@@ -44,28 +48,28 @@ public class EncodingHelper
     
     public static string DecodeMessage(string message, Aes aes, string iv)
     {
-        byte[] encryptedBytes = StringToByteBase64(message);
-        byte[] ivBytes = StringToByteBase64(iv);
+        var encryptedBytes = StringToByteBase64(message);
+        var ivBytes = StringToByteBase64(iv);
         Console.WriteLine(BitConverter.ToString(ivBytes));
         Console.WriteLine(BitConverter.ToString(aes.IV));
         aes.IV = ivBytes;
-        byte[] decryptedBytes = SymmetricDecrypt(encryptedBytes, aes);
-        string decodedMessage = ByteToStringUtf(decryptedBytes);
+        var decryptedBytes = SymmetricDecrypt(encryptedBytes, aes);
+        var decodedMessage = ByteToStringUtf(decryptedBytes);
         return decodedMessage;
     }
     
     public static byte[] BuildResponse(string response, Aes key)
     {
-        string headerProtocol = "GET PIZZA/1.1" + PizzaServer.Eol;
-        string headerIv = "IV: " + ByteToStringBase64(key.IV) + PizzaServer.Eol;
-        string headerMessage = "Message: ";
-        byte[] messageBytes = StringToByteUtf(response);
-        byte[] headerBytes = StringToByteUtf(headerProtocol + headerIv + headerMessage);
-        byte[] encryptedMessage = SymmetricEncrypt(messageBytes, key);
+        const string headerProtocol = "GET PIZZA/1.1" + PizzaServer.Eol;
+        var headerIv = "IV: " + ByteToStringBase64(key.IV) + PizzaServer.Eol;
+        var headerMessage = "Message: ";
+        var messageBytes = StringToByteUtf(response);
+        var headerBytes = StringToByteUtf(headerProtocol + headerIv + headerMessage);
+        var encryptedMessage = SymmetricEncrypt(messageBytes, key);
         
-        string basedMessage = ByteToStringBase64(encryptedMessage);
-        byte[] finalMessage = StringToByteUtf(basedMessage + PizzaServer.Eot);
-        byte[] bytesToSend = headerBytes.Concat(finalMessage).ToArray();
+        var basedMessage = ByteToStringBase64(encryptedMessage);
+        var finalMessage = StringToByteUtf(basedMessage + PizzaServer.Eot);
+        var bytesToSend = headerBytes.Concat(finalMessage).ToArray();
         return bytesToSend;
 
     }

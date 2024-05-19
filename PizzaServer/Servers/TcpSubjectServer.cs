@@ -75,7 +75,7 @@ public class TcpSubjectServer(int port) : IServerSubject, IHaveAes
                     {
                         throw new Exception("RSA is required for this observer");
                     }
-                    requireRsa.Update(requestType, message, response, _rsa, this);
+                    requireRsa.Update(message, response, _rsa, this);
                 }
                 else if (observer is ISocketObserverRequireAes requireAes)
                 {
@@ -83,11 +83,11 @@ public class TcpSubjectServer(int port) : IServerSubject, IHaveAes
                     {
                         throw new Exception("AES is required for this observer");
                     }
-                    requireAes.Update(requestType, message, response, _aes);
+                    requireAes.Update(message, response, _aes);
                 }
                 else
                 {
-                    observer.Update(requestType, message, response);
+                    observer.Update(message, response);
                 }
             }
         }
