@@ -56,7 +56,7 @@ public interface ISocketObserverRequireAes : ISocketObserver
 }
 
 /// <summary>
-/// Implement this Interface to build an alternative server
+/// Implement this Interface to build a  server!
 /// </summary>
 public interface IServerSubject
 {
@@ -70,6 +70,15 @@ public interface IServerSubject
     
     void Detach(ISocketObserver socketObserver, string requestType);
     
+    /// <summary>
+    /// Notify the correct observer with the incoming message
+    /// </summary>
+    /// <implementation>
+    /// Identify the correct observer to call, based on observer-type and request-type. Then call its update method with the required parameters.
+    /// </implementation>
+    /// <param name="requestType"></param>
+    /// <param name="message"></param>
+    /// <param name="response"></param>
     void Notify(string requestType, string message, IResponse response);
     
     /// <summary>

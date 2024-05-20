@@ -13,7 +13,7 @@ public partial class UdpSubjectServer(int port): IServerSubject, IHaveAes
     private IPEndPoint _endPoint = new(IPAddress.Any, 0);
     
     private readonly RSACryptoServiceProvider _rsa = new();
-    private Aes _aes = null!;
+    private Aes? _aes;
 
     private readonly Dictionary<string, List<ISocketObserver>> _observers = new();
 
@@ -25,7 +25,7 @@ public partial class UdpSubjectServer(int port): IServerSubject, IHaveAes
             var receivedBytes = _udpClient.Receive(ref _endPoint);
             var receivedData = EncodingHelper.ByteToStringUtf(receivedBytes);
             if (!Regex.IsMatch(receivedData, "^GET")) continue;
-            var requestType = MyRegex().Match(receivedData).Groups[1].Value.Trim();
+            var requestType = TypeHeaderRegex().Match(receivedData).Groups[1].Value.Trim();
             var udpResponse = new UdpResponse(_udpClient, _endPoint);
             Notify(requestType, receivedData, udpResponse);
         }
@@ -58,12 +58,10 @@ public partial class UdpSubjectServer(int port): IServerSubject, IHaveAes
             {
                 switch (observer)
                 {
-                    case ISocketObserverRequireRsa requireRsa when _rsa == null:
-                        throw new Exception("RSA is required for this observer");
                     case ISocketObserverRequireRsa requireRsa:
                         requireRsa.Update(message, response, _rsa, this);
                         break;
-                    case ISocketObserverRequireAes requireAes when _aes == null:
+                    case ISocketObserverRequireAes when _aes == null:
                         throw new Exception("AES is required for this observer");
                     case ISocketObserverRequireAes requireAes:
                         requireAes.Update(message, response, _aes);
@@ -86,5 +84,5 @@ public partial class UdpSubjectServer(int port): IServerSubject, IHaveAes
     }
 
     [GeneratedRegex("Type: (.*)")]
-    private static partial Regex MyRegex();
+    private static partial Regex TypeHeaderRegex();
 }

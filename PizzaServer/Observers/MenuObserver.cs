@@ -19,22 +19,19 @@ public class MenuObserver: ISocketObserverRequireAes
     
     public void Update(string data, IResponse response, Aes? aes)
     {
-        throw new NotImplementedException();
+        response.Send(
+    EncodingHelper.BuildResponse(
+                DictionaryToString(_menu), aes
+            )
+        );
     }
     
     public void Update(string data, IResponse response)
     {
-        throw new Exception("I need AES to work!");
+        throw new Exception("I require aes to work");
     }
 
-    static string DictionaryToString(Dictionary<string, int> dictionary)
-    {
-        string result = "";
-        foreach (var item in dictionary)
-        {
-            result += item.Key + ": " + item.Value + PizzaServer.Eol;
-        }
-        return result;
-    }
-
+    static string DictionaryToString(Dictionary<string, int> dictionary) =>
+        dictionary.Aggregate("", (current, item) =>
+            $"{current}{(item.Key + ": " + item.Value + PizzaServer.Eol)}");
 }

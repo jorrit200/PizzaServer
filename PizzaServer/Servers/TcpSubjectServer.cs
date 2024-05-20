@@ -7,11 +7,11 @@ using PizzaServer.Observers;
 
 namespace PizzaServer.Servers;
 
-public class TcpSubjectServer(int port) : IServerSubject, IHaveAes
+public partial class TcpSubjectServer(int port) : IServerSubject, IHaveAes
 {
     private readonly TcpListener _tcpListener = new(IPAddress.Parse("127.0.0.1"), port);
     private readonly RSACryptoServiceProvider _rsa = new();
-    private Aes? _aes = null!;
+    private Aes? _aes;
     private readonly Dictionary<string, List<ISocketObserver>> _observers = new();
 
     public void Start()
@@ -34,12 +34,12 @@ public class TcpSubjectServer(int port) : IServerSubject, IHaveAes
             // ReSharper disable once MustUseReturnValue
             stream.Read(bytes, 0, bytes.Length);
 
-            String data = EncodingHelper.ByteToStringUtf(bytes);
+            var data = EncodingHelper.ByteToStringUtf(bytes);
 
-            if (!Regex.IsMatch(data, "^GET")) continue;
+            if (!VerbGetRegex().IsMatch(data)) continue;
             var tcpResponse = new TcpResponse(stream);
             Console.WriteLine("We are getting a GET request");
-            string requestType = new Regex("Type: (.*)").Match(data).Groups[1].Value.Trim();
+            var requestType = TypeHeaderRegex().Match(data).Groups[1].Value.Trim();
             Notify(requestType, data, tcpResponse);
         }
         // ReSharper disable once FunctionNeverReturns
@@ -47,11 +47,13 @@ public class TcpSubjectServer(int port) : IServerSubject, IHaveAes
 
     public void Attach(ISocketObserver socketObserver, string requestType)
     {
-        if (!_observers.ContainsKey(requestType))
+        if (!_observers.TryGetValue(requestType, out var requestTypeObserverList))
         {
-            _observers[requestType] = new List<ISocketObserver>();
+            requestTypeObserverList = new List<ISocketObserver>();
+            _observers[requestType] = requestTypeObserverList;
         }
-        _observers[requestType].Add(socketObserver);
+
+        requestTypeObserverList.Add(socketObserver);
     }
 
     public void Detach(ISocketObserver socketObserver, string requestType)
@@ -69,25 +71,19 @@ public class TcpSubjectServer(int port) : IServerSubject, IHaveAes
         {
             foreach (var observer in requestedObservers)
             {
-                if (observer is ISocketObserverRequireRsa requireRsa)
+                switch (observer)
                 {
-                    if (_rsa == null)
-                    {
-                        throw new Exception("RSA is required for this observer");
-                    }
-                    requireRsa.Update(message, response, _rsa, this);
-                }
-                else if (observer is ISocketObserverRequireAes requireAes)
-                {
-                    if (_aes == null)
-                    {
+                    case ISocketObserverRequireRsa requireRsa:
+                        requireRsa.Update(message, response, _rsa, this);
+                        break;
+                    case ISocketObserverRequireAes when _aes == null:
                         throw new Exception("AES is required for this observer");
-                    }
-                    requireAes.Update(message, response, _aes);
-                }
-                else
-                {
-                    observer.Update(message, response);
+                    case ISocketObserverRequireAes requireAes:
+                        requireAes.Update(message, response, _aes);
+                        break;
+                    default:
+                        observer.Update(message, response);
+                        break;
                 }
             }
         }
@@ -101,4 +97,9 @@ public class TcpSubjectServer(int port) : IServerSubject, IHaveAes
     {
         _aes = aes;
     }
+
+    [GeneratedRegex("Type: (.*)")]
+    private static partial Regex TypeHeaderRegex();
+    [GeneratedRegex("^GET")]
+    private static partial Regex VerbGetRegex();
 }

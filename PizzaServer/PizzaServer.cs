@@ -6,7 +6,7 @@ internal static class PizzaServer
 {
     public const string Eol = "\r\n";
     public const string Eot = "EOT;";
-    private const string Protocol = "TCP";
+    private const string Protocol = "UPD";
     private const int Port = 6789;
     public static void Main()
     {
