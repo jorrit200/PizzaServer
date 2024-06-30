@@ -34,11 +34,13 @@ public partial class UdpSubjectServer(int port): IServerSubject, IHaveAes
     
     public void Attach(ISocketObserver socketObserver, string requestType)
     {
-        if (!_observers.ContainsKey(requestType))
+        if (!_observers.TryGetValue(requestType, out var value))
         {
-            _observers[requestType] = [];
+            value = ([]);
+            _observers[requestType] = value;
         }
-        _observers[requestType].Add(socketObserver);
+
+        value.Add(socketObserver);
     }
 
     public void Detach(ISocketObserver socketObserver, string requestType)

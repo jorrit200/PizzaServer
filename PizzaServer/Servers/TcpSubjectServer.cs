@@ -93,7 +93,7 @@ public partial class TcpSubjectServer(int port) : IServerSubject, IHaveAes
         }
     }
     
-    public void SetAes(Aes? aes)
+    public void SetAes(Aes aes)
     {
         _aes = aes;
     }

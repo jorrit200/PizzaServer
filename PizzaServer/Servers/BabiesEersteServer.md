@@ -12,7 +12,7 @@ In dit document wordt stap voor stap de [TestSubjectServer](TestSubjectServer.cs
 ## 1. De classes
 Een SubjectServer implementeert [IServerSubject](../Observers/ISocketObserver.cs) en [IHaveAes](../IHaveAes.cs) (als het nodig is om observers te attachen die AES vereisen of aanmaken, hierover later meer).
 
-Laten we de class `TestSubjectServer` aanmaken, de interfaces inhereten, en members implementeren.A
+Laten we de class `TestSubjectServer` aanmaken, de interfaces inhereten, en members implementeren.
 
 ```csharp
 // TestSubjectServer.cs
@@ -76,4 +76,8 @@ public void Detach(ISocketObserver socketObserver, string requestType)
 De server houdt nu een dictonary mij met request-types als keys, en arrays met observers als values. In theorie is het dus mogelijk om meerdere observers aan een request te koppelen.
 
 ### 2.2 Notify
-De notify functie stuurt elk binnenkomend bericht naar
+De notify functie stuurt elk binnenkomend bericht naar de correcte observer. Dit doet hij door de request type te matchen met het type in de dictionary. Ook word er op basis van de geimplementeerde Interface gekeken of de server kan voldoen aand de eis die deze Interface stelt, bijvoorbeeld AES of RSA (hoewel RSA te garanderen valt). Dit zelfde princiepe kan ook gebruikt worden voor het vereisen van een database connectie bijvoorbeeld.
+Hier volgt de implementatie:
+```csharp
+
+```
