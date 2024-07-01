@@ -2,9 +2,9 @@
 
 Een [Observer](../Observers/ISocketObserver.cs) werkt op meerdere server types. Het is dus niet de taak van de server om de verschillende request af te vangen, maar om de onderliggende communicatie techniek af te handelen.
 
-Het is de taak van de server om het ruwe bericht als een string aand Observer te geven, en een [IResponse](../Responses/IResponse.cs) mee te geven waar de observer zijn antwoord heen kan sturen.
+Het is de taak van de server om het ruwe bericht als een string aan de Observer te geven, en een [IResponse](../Responses/IResponse.cs) mee te geven waar de observer zijn antwoord heen kan sturen.
 
-Een server implementeerd dus een netwerk protocol ([TCP](TcpSubjectServer.cs)/[UDP](UdpSubjectServer.cs)). Maar niet het communicatie protocol (Beide servers en subjects gaan uit van het pizza protocol).
+Een server implementeerd dus een netwerk protocol ([TCP](TcpSubjectServer.cs)/[UDP](UdpSubjectServer.cs)), maar niet het communicatie protocol (Beide servers en subjects gaan uit van het pizza protocol).
 
 Communicatie hoeft echter niet over een netwerk te gaan. Laten we een "server" bouwen om onze Observers te testen.
 In dit document wordt stap voor stap de [TestSubjectServer](TestSubjectServer.cs) gebouwd.
@@ -75,9 +75,54 @@ public void Detach(ISocketObserver socketObserver, string requestType)
 ```
 De server houdt nu een dictonary mij met request-types als keys, en arrays met observers als values. In theorie is het dus mogelijk om meerdere observers aan een request te koppelen.
 
-### 2.2 Notify
-De notify functie stuurt elk binnenkomend bericht naar de correcte observer. Dit doet hij door de request type te matchen met het type in de dictionary. Ook word er op basis van de geimplementeerde Interface gekeken of de server kan voldoen aand de eis die deze Interface stelt, bijvoorbeeld AES of RSA (hoewel RSA te garanderen valt). Dit zelfde princiepe kan ook gebruikt worden voor het vereisen van een database connectie bijvoorbeeld.
+### 2.2 Keys
+De server moet zijn eigen keys bijhouden, om Observers af te kunnen gebruiken die RSA of AES keys gebruiken (de observers die ISocketObserverRequireRSa of IsocketObserverRequireAes, implementeren). Aangezien elke observer die we hebben gemaakt een sleutel verijst (omdat alle data versleuteld moet worden als verijste van de opdracht) zal onze test server dit ook moetnen doen.
+
+De server kan gemakkelijk zijn eigen RSA key aanmaken, en de AES key zal gelverd worden door [KeyExcangeObserver](../Observers/KeyExchangeObserver.cs). De server hoeft dus alleen een RSA object aan te maken, en een field hebben om een Aes key te houden.
+```csharp
+private readonly RSACryptoServiceProvider _rsa = new();
+private Aes? _aes;
+```
+Het RSA object is readonly omdat de key niet gecycled word, en dus nooit verandert hoeft te worden.  
+Het AES object kan null zijn, omdat de server voor zijn eerste request nog geen AES key zal hebben (de krijgt hij immers van de key exchange request)
+
+Laten we de `SetAes` method implementeren, die we eerder hebben geërft hebben van `IHaveAes`
+
+```csharp
+public void SetAes(Aes aes)
+{
+    _aes = aes;
+}
+```
+
+### 2.3 Notify
+De notify method stuurt elk binnenkomend bericht naar de correcte observer. Dit doet hij door de request type te matchen met het type in de dictionary. Ook word er op basis van de geimplementeerde Interface gekeken of de server kan voldoen aan de eis die deze Interface stelt, bijvoorbeeld AES of RSA (hoewel RSA te garanderen valt). Dit zelfde princiepe kan ook gebruikt worden voor het vereisen van een database connectie bijvoorbeeld.
 Hier volgt de implementatie:
 ```csharp
-
+ public void Notify(string requestType, string message, IResponse response)
+{
+    if (!_observers.TryGetValue(requestType, out var requestedObservers)) return;
+    foreach (var requestedObserver in requestedObservers)
+    {
+        switch (requestedObserver)
+        {
+            case ISocketObserverRequireRsa requireRsa:
+                requireRsa.Update(message, response, _rsa, this);
+                break;
+            case ISocketObserverRequireAes when _aes == null:
+                throw new Exception(
+                    "This server does not yet have an AES key, so it can not handle this request");
+            case ISocketObserverRequireAes requireAes:
+                requireAes.Update(message, response, _aes);
+                break;
+            default:
+                requestedObserver.Update(message, response);
+                break;
+        }
+    }
+}
 ```
+
+# 3. Het starten van de server
+Tot nu toe hebben we alle methods geimplementeerd die onze Interfaces vereisen, bahlve de `Start()` method. De start methode opent een endpoint om te gaan praten met de server, en start vaak een eindelose loop om te luisteren naar clients.  
+Tot dusver zijn we alleen nog maar abstract bezig geweest met de logica van onze server, maar nu word het tijd om de daadwerkelijke onderliggende communicatie te gaan implementeren.

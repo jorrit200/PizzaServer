@@ -19,11 +19,7 @@ public class MenuObserver: ISocketObserverRequireAes
     
     public void Update(string data, IResponse response, Aes? aes)
     {
-        response.Send(
-    EncodingHelper.BuildResponse(
-                DictionaryToString(_menu), aes
-            )
-        );
+        response.Send(EncodingHelper.BuildResponse(DictionaryToString(_menu), aes));
     }
     
     public void Update(string data, IResponse response)

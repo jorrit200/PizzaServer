@@ -7,6 +7,10 @@ namespace PizzaServer.Servers;
 public class TestSubjectServer: IServerSubject, IHaveAes 
 {
     private readonly Dictionary<string, List<ISocketObserver>> _observers = new();
+
+    private readonly RSACryptoServiceProvider _rsa = new();
+    private Aes? _aes;
+    
     public void Attach(ISocketObserver socketObserver, string requestType)
     {
         if (!_observers.TryGetValue(requestType, out var requestTypeObserverList))
@@ -28,7 +32,25 @@ public class TestSubjectServer: IServerSubject, IHaveAes
 
     public void Notify(string requestType, string message, IResponse response)
     {
-        throw new NotImplementedException();
+        if (!_observers.TryGetValue(requestType, out var requestedObservers)) return;
+        foreach (var requestedObserver in requestedObservers)
+        {
+            switch (requestedObserver)
+            {
+                case ISocketObserverRequireRsa requireRsa:
+                    requireRsa.Update(message, response, _rsa, this);
+                    break;
+                case ISocketObserverRequireAes when _aes == null:
+                    throw new Exception(
+                        "This server does not yet have an AES key, so it can not handle this request");
+                case ISocketObserverRequireAes requireAes:
+                    requireAes.Update(message, response, _aes);
+                    break;
+                default:
+                    requestedObserver.Update(message, response);
+                    break;
+            }
+        }
     }
 
     public void Start()
@@ -38,6 +60,6 @@ public class TestSubjectServer: IServerSubject, IHaveAes
 
     public void SetAes(Aes aes)
     {
-        throw new NotImplementedException();
+        _aes = aes;
     }
 }
