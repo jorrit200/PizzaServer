@@ -47,15 +47,14 @@ public abstract class InterpreterMachine
         var lines = text.Split("\n");
         foreach (var line in lines)
         {
-            var lineEnumerator = InterpretLines(line);
             if (PreInterpretLine(line))
             {
-                lineEnumeratorI
+                var lineEnumerator = InterpretLines(line);
             }
         }
     }
 
-    public abstract IEnumerable InterpretLines(string line);
+    public abstract IEnumerator InterpretLines(string line);
 }
 
 public class OrderInterpreterMachine : InterpreterMachine
@@ -71,7 +70,7 @@ public class OrderInterpreterMachine : InterpreterMachine
         _validator = new NameValidator();
     }
 
-    public override IEnumerable InterpretLines(string line)
+    public override IEnumerator InterpretLines(string line)
     {
         // initial validator is set to name
         _name = line; // Yo the first line is the name
@@ -83,14 +82,14 @@ public class OrderInterpreterMachine : InterpreterMachine
         yield return null; // we are done with this line
         
         _area = line; // This line must be an area
-        // Im done interpeting, cuz I handled everything I expect to see
+        // Im done interpreting, cuz I handled everything I expect to see
     }
 }
 
 
 class PizzaInterpreterMachine : InterpreterMachine
 {
-    public override IEnumerable<ILineValidator?> InterpretLines(string line)
+    public override IEnumerator InterpretLines(string line)
     {
         throw new NotImplementedException();
     }
