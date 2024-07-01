@@ -18,43 +18,53 @@ public abstract class InterpreterMachine
 {
     protected ILineValidator? _validator;
     protected bool _done = false;
+    
+    private readonly IEnumerator<string> _lines;
+    protected string _currentLine;
 
-    public void Expect(ILineValidator validator)
+    private IEnumerator? _interpretState;
+
+    protected InterpreterMachine(IEnumerator<string> lines) => _lines = lines;
+
+    protected void Expect(ILineValidator? validator)
     {
         _validator = validator;
     }
 
-    public bool PreInterpretLine(string line)
+    protected bool NextLine()
     {
-        if (line.Length == 0)
+        if (!_lines.MoveNext())
         {
             return false;
         }
-        if (_done)
-        {
-            return false;
-        }
-
-        if (_validator != null && !_validator.Validate(line))
-        {
-            throw new Exception($"expected {_validator}, but got {line} instead");
-        }
-
-        return true;
+        var line = _lines.Current;
+        _currentLine = line;
+        return _validator is null || _validator.Validate(line);
     }
-    public void Interpret(string text)
+
+    protected void Interpret()
     {
-        var lines = text.Split("\n");
-        foreach (var line in lines)
+        while (NextLine())
         {
-            if (PreInterpretLine(line))
+            if (_interpretState is null)
             {
-                var lineEnumerator = InterpretLines(line);
+                _interpretState = InterpretLines();
+            }
+            else
+            {
+                if (!_interpretState.MoveNext())
+                {
+                    Console.WriteLine("Interpreter machine failure! More lines than interpret steps");
+                }
             }
         }
-    }
 
-    public abstract IEnumerator InterpretLines(string line);
+        if (!_done)
+        {
+            Console.WriteLine("Interpreter machine failure!");
+        }
+    }
+    public abstract IEnumerator InterpretLines();
 }
 
 public class OrderInterpreterMachine : InterpreterMachine
@@ -65,31 +75,30 @@ public class OrderInterpreterMachine : InterpreterMachine
 
     private List<PizzaInterpreterMachine>? _pizzaInterpreters;
     
-    public OrderInterpreterMachine()
+    public OrderInterpreterMachine(IEnumerator<string> lines) : base(lines)
     {
         _validator = new NameValidator();
     }
 
-    public override IEnumerator InterpretLines(string line)
+    public override IEnumerator InterpretLines()
     {
-        // initial validator is set to name
-        _name = line; // Yo the first line is the name
-        Expect(Validator.Address()); // I expect the next line to be an adrress
-        yield return null; // Yo we are done with this line (continue with the next line below)
+        _name = _currentLine;
+        Expect(Validator.Address());
+        yield return null;
         
-        _address = line; // this second line must be an address (validation was done outside this function, but request by this function on the previous itteration)
-        Expect(Validator.Area()); // I expect the next line to be an area
-        yield return null; // we are done with this line
-        
-        _area = line; // This line must be an area
-        // Im done interpreting, cuz I handled everything I expect to see
+        _address = _currentLine;
+        Expect(Validator.Area());
+        yield return null;
+
+        _area = _currentLine;
+        _done = true;
     }
 }
 
 
-class PizzaInterpreterMachine : InterpreterMachine
+class PizzaInterpreterMachine(IEnumerator<string> lines) : InterpreterMachine(lines)
 {
-    public override IEnumerator InterpretLines(string line)
+    public override IEnumerator InterpretLines()
     {
         throw new NotImplementedException();
     }
