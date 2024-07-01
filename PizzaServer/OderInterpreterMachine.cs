@@ -1,4 +1,6 @@
-﻿namespace PizzaServer;
+﻿using System.Collections;
+
+namespace PizzaServer;
 
 // • NAW van de klant
 //  o Naam klant (name)
@@ -12,7 +14,7 @@
 // • Datum en tijd van bestelling (2digits/2digits/4digits 2digits:2digits)
 
 
-public class InterpreterMachine
+public abstract class InterpreterMachine
 {
     protected ILineValidator? _validator;
     protected bool _done = false;
@@ -22,9 +24,8 @@ public class InterpreterMachine
         _validator = validator;
     }
 
-    public bool PreInterpretLine(string text)
+    public bool PreInterpretLine(string line)
     {
-        var line = text.Split('\n')[0];
         if (line.Length == 0)
         {
             return false;
@@ -41,23 +42,59 @@ public class InterpreterMachine
 
         return true;
     }
+    public void Interpret(string text)
+    {
+        var lines = text.Split("\n");
+        foreach (var line in lines)
+        {
+            var lineEnumerator = InterpretLines(line);
+            if (PreInterpretLine(line))
+            {
+                lineEnumeratorI
+            }
+        }
+    }
+
+    public abstract IEnumerable InterpretLines(string line);
 }
 
-class OrderInterpreterMachine : InterpreterMachine
+public class OrderInterpreterMachine : InterpreterMachine
 {
-    OrderInterpreterMachine()
+    private string? _name;
+    private string? _address;
+    private string? _area;
+
+    private List<PizzaInterpreterMachine>? _pizzaInterpreters;
+    
+    public OrderInterpreterMachine()
     {
         _validator = new NameValidator();
     }
 
-    public void Interpret(string text)
+    public override IEnumerable InterpretLines(string line)
     {
-        var lines = text.Split("\n");
-        var i = 0;
+        // initial validator is set to name
+        _name = line; // Yo the first line is the name
+        Expect(Validator.Address()); // I expect the next line to be an adrress
+        yield return null; // Yo we are done with this line (continue with the next line below)
         
+        _address = line; // this second line must be an address (validation was done outside this function, but request by this function on the previous itteration)
+        Expect(Validator.Area()); // I expect the next line to be an area
+        yield return null; // we are done with this line
+        
+        _area = line; // This line must be an area
+        // Im done interpeting, cuz I handled everything I expect to see
     }
 }
 
+
+class PizzaInterpreterMachine : InterpreterMachine
+{
+    public override IEnumerable<ILineValidator?> InterpretLines(string line)
+    {
+        throw new NotImplementedException();
+    }
+}
 
 
 public interface ILineValidator
