@@ -129,15 +129,15 @@ public class OrderInterpreterMachine : InterpreterMachine
 
         while (true)
         {
-            var pizzaOrTime = _currentLine;
-            if (Validator.TimeStamp().Validate(pizzaOrTime))
+            var pizzaNameOrTime = _currentLine;
+            if (Validator.TimeStamp().Validate(pizzaNameOrTime))
             {
-                _time = pizzaOrTime;
+                _time = pizzaNameOrTime;
                 _done = true;
                 yield break;
             }
 
-            var currentPizza = new Pizza(pizzaOrTime, _menu);
+            var currentPizza = new Pizza(pizzaNameOrTime, _menu);
             Expect(new Validator([new AtLeastValidator(1, new DigitValidator()), new EndValidator()]));
             yield return null;
 
@@ -147,18 +147,22 @@ public class OrderInterpreterMachine : InterpreterMachine
             yield return null;
             
             var toppingCount = int.Parse(_currentLine);
-            Expect(new NameValidator());
+            Expect(toppingCount > 0 ? new NameValidator() : null);
+            if (toppingCount == 0)
+            {
+                _pizzas.Add(currentPizza);
+            }
             yield return null;
 
             for (var i = 0; i < toppingCount; i++)
             {
                 currentPizza = currentPizza.WithTopping(_currentLine, _toppings);
-                Expect(new NameValidator());
+                Expect(new NameValidator()); // weather the next line is a topping or pizza, both are names
 
                 if (i == toppingCount - 1)
                 {
                     _pizzas.Add(currentPizza);
-                    Expect(Validator.TimeStamp());
+                    Expect(null); // The next line might be another pizza, or a timestamp
                 }
                 yield return null;
             }
@@ -170,12 +174,12 @@ public class OrderInterpreterMachine : InterpreterMachine
     {
         if (_name is null || _address is null || _area is null || _time is null)
         {
-            throw new Exception($"Not all fields where filled in (name, address, area, date/time) ({_name}, {_address}, {_area}, {_time})");
+            throw new Exception($"Not all fields were filled in (name, address, area, date/time) ({_name}, {_address}, {_area}, {_time})");
         }
 
         if (_pizzas.Count == 0)
         {
-            throw new Exception("and order was made with not valid pizzas");
+            throw new Exception("and order was made with no valid pizzas");
         }
 
         if (_pizzas.Count != _pizzaCounts.Count)

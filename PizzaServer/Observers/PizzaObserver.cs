@@ -24,9 +24,18 @@ public class PizzaObserver: ISocketObserverRequireAes
         string decodedMessage = EncodingHelper.DecodeMessage(message, aes, clientsIv);
         Console.WriteLine("Message: " + decodedMessage);
 
+        if (decodedMessage.EndsWith("EOT;"))
+        {
+            decodedMessage = decodedMessage.Substring(0, decodedMessage.Length - 4);
+        }
+        var orderInterpreter = new OrderInterpreterMachine(decodedMessage.Split("\n").ToList().GetEnumerator(),
+            _menu, _toppings);
         
+        orderInterpreter.Interpret();
+        
+        Order order = orderInterpreter.ToOrder();
 
-        byte[] responseMessage = EncodingHelper.BuildResponse("Budget approved, sending pizza", aes);
+        byte[] responseMessage = EncodingHelper.BuildResponse($"Totale prijs: {order.GetTotalPrice()}.", aes);
         response.Send(responseMessage);
         
     }
