@@ -5,6 +5,7 @@ namespace PizzaServer;
 // • NAW van de klant
 //  o Naam klant (name)
 //  o Address (4digits 2caps name)
+//  o Area ()
 // • Per soort pizza:
 //  o Naam van de pizza (+int)
 //  o Aantal pizza’s (+int)
@@ -22,7 +23,7 @@ public abstract class InterpreterMachine
     private readonly IEnumerator<string> _lines;
     protected string _currentLine;
 
-    private IEnumerator? _interpretState;
+    protected IEnumerator? _interpretState;
 
     protected InterpreterMachine(IEnumerator<string> lines) => _lines = lines;
 
@@ -37,26 +38,24 @@ public abstract class InterpreterMachine
         {
             return false;
         }
+
+        if (_done)
+        {
+            return false;
+        }
         var line = _lines.Current;
         _currentLine = line;
         return _validator is null || _validator.Validate(line);
     }
-
-    protected void Interpret()
+    
+    public void Interpret()
     {
         while (NextLine())
         {
-            if (_interpretState is null)
-            {
-                _interpretState = InterpretLines();
-            }
-            else
-            {
-                if (!_interpretState.MoveNext())
-                {
-                    Console.WriteLine("Interpreter machine failure! More lines than interpret steps");
-                }
-            }
+            _interpretState ??= InterpretLines();
+            if (_interpretState.MoveNext()) continue;
+            Console.WriteLine("more lines than interpreter steps");
+            break;
         }
 
         if (!_done)
@@ -64,7 +63,9 @@ public abstract class InterpreterMachine
             Console.WriteLine("Interpreter machine failure!");
         }
     }
-    public abstract IEnumerator InterpretLines();
+
+    // public abstract void Interpret();
+    protected abstract IEnumerator InterpretLines();
 }
 
 public class OrderInterpreterMachine : InterpreterMachine
@@ -72,15 +73,21 @@ public class OrderInterpreterMachine : InterpreterMachine
     private string? _name;
     private string? _address;
     private string? _area;
+    private string? _time;
+    private List<Pizza> _pizzas = new();
+    private List<int> _pizzaCounts = new List<int>();
 
-    private List<PizzaInterpreterMachine>? _pizzaInterpreters;
+    private Dictionary<string, int> _menu;
+    private Dictionary<string, int> _toppings;
     
-    public OrderInterpreterMachine(IEnumerator<string> lines) : base(lines)
+    public OrderInterpreterMachine(IEnumerator<string> lines, Dictionary<string, int> menu, Dictionary<string, int> toppings) : base(lines)
     {
         _validator = new NameValidator();
+        _menu = menu;
+        _toppings = toppings;
     }
 
-    public override IEnumerator InterpretLines()
+    protected override IEnumerator InterpretLines()
     {
         _name = _currentLine;
         Expect(Validator.Address());
@@ -91,16 +98,46 @@ public class OrderInterpreterMachine : InterpreterMachine
         yield return null;
 
         _area = _currentLine;
-        _done = true;
-    }
-}
+        Expect(null);
+        yield return null;
 
+        while (true)
+        {
+            string pizzaOrTime = _currentLine;
+            if (Validator.TimeStamp().Validate(pizzaOrTime))
+            {
+                _time = pizzaOrTime;
+                _done = true;
+                yield break;
+            }
 
-class PizzaInterpreterMachine(IEnumerator<string> lines) : InterpreterMachine(lines)
-{
-    public override IEnumerator InterpretLines()
-    {
-        throw new NotImplementedException();
+            Pizza currentPizza = new Pizza(pizzaOrTime, _menu);
+            Expect(new Validator([new AtLeastValidator(1, new DigitValidator()), new EndValidator()]));
+            yield return null;
+
+            var pizzaCount = Int32.Parse(_currentLine);
+            _pizzaCounts.Add(pizzaCount);
+            Expect(new Validator([new AtLeastValidator(1, new DigitValidator()), new EndValidator()]));
+            yield return null;
+            
+            var toppingCount = Int32.Parse(_currentLine);
+            Expect(new NameValidator());
+            yield return null;
+
+            for (int i = 0; i < toppingCount; i++)
+            {
+                currentPizza = currentPizza.WithTopping(_currentLine, _toppings);
+                Expect(new NameValidator());
+
+                if (i == toppingCount - 1)
+                {
+                    _pizzas.Add(currentPizza);
+                    Expect(Validator.TimeStamp());
+                }
+                yield return null;
+            }
+            
+        }
     }
 }
 
