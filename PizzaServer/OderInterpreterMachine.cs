@@ -1,20 +1,15 @@
 ﻿using System.Collections;
+using System.Runtime.InteropServices.JavaScript;
 
 namespace PizzaServer;
 
-// • NAW van de klant
-//  o Naam klant (name)
-//  o Address (4digits 2caps name)
-//  o Area ()
-// • Per soort pizza:
-//  o Naam van de pizza (+int)
-//  o Aantal pizza’s (+int)
-//  o Aantal extra toppings (+int)
-//  o Voor elke extra topping een veld waarin de topping beschreven staat 
-//      (name)
-// • Datum en tijd van bestelling (2digits/2digits/4digits 2digits:2digits)
-
-
+/// <summary>
+/// Allows you to populate the <see cref="InterpretLines"/> method, in which you can write sequential logic, to interpret multiple lines.
+/// </summary>
+/// <implementation>
+/// implement <see cref="InterpretLines"/>, and keep track of the data.
+/// Typically, each InterpreterMachine represents some model that gets serialized and serialized. You can also create a To{Model}() method that creates said model, after some checks 
+/// </implementation>
 public abstract class InterpreterMachine
 {
     protected ILineValidator? _validator;
@@ -27,11 +22,20 @@ public abstract class InterpreterMachine
 
     protected InterpreterMachine(IEnumerator<string> lines) => _lines = lines;
 
+    /// <summary>
+    /// When moving to the next line <see cref="NextLine"/>, enforce that line is of a valid format.
+    /// Call this method while using <see cref="InterpretLines"/>, to prepare for the next line.
+    /// </summary>
+    /// <param name="validator">The formatter that must return true on the following line, or `null` to allow any line</param>
     protected void Expect(ILineValidator? validator)
     {
         _validator = validator;
     }
 
+    /// <summary>
+    /// Iterate the lines enumerator, and check it is valid with the validator from <see cref="Expect"/>
+    /// </summary>
+    /// <returns>Weather or not the line can be iterated, and this line is valid</returns>
     protected bool NextLine()
     {
         if (!_lines.MoveNext())
@@ -48,13 +52,15 @@ public abstract class InterpreterMachine
         return _validator is null || _validator.Validate(line);
     }
     
+    /// <summary>
+    /// Begin the process of interpreting
+    /// </summary>
     public void Interpret()
     {
         while (NextLine())
         {
             _interpretState ??= InterpretLines();
             if (_interpretState.MoveNext()) continue;
-            Console.WriteLine("more lines than interpreter steps");
             break;
         }
 
@@ -63,10 +69,30 @@ public abstract class InterpreterMachine
             Console.WriteLine("Interpreter machine failure!");
         }
     }
-
-    // public abstract void Interpret();
+    /// <summary>
+    /// Tippically only called by <see cref="Interpret"/>
+    /// </summary>
+    /// <returns>Enumerator to keep calling</returns>
+    /// <implementation>
+    /// Write sequential logic to deal with each line. After each `yield return` `_currentLine` becomes the next line.
+    /// Before iterating use <see cref="Expect"/> to enforce a certain format from the next line.
+    /// This method should focus on the happy path.
+    /// </implementation>
     protected abstract IEnumerator InterpretLines();
 }
+
+
+// • NAW van de klant
+//  o Naam klant (name)
+//  o Address (name +int)
+//  o Area (4digits 2caps name)
+// • Per soort pizza:
+//  o Naam van de pizza (+int)
+//  o Aantal pizza’s (+int)
+//  o Aantal extra toppings (+int)
+//  o Voor elke extra topping een veld waarin de topping beschreven staat 
+//      (name)
+// • Datum en tijd van bestelling (2digits/2digits/4digits 2digits:2digits)
 
 public class OrderInterpreterMachine : InterpreterMachine
 {
@@ -103,7 +129,7 @@ public class OrderInterpreterMachine : InterpreterMachine
 
         while (true)
         {
-            string pizzaOrTime = _currentLine;
+            var pizzaOrTime = _currentLine;
             if (Validator.TimeStamp().Validate(pizzaOrTime))
             {
                 _time = pizzaOrTime;
@@ -111,20 +137,20 @@ public class OrderInterpreterMachine : InterpreterMachine
                 yield break;
             }
 
-            Pizza currentPizza = new Pizza(pizzaOrTime, _menu);
+            var currentPizza = new Pizza(pizzaOrTime, _menu);
             Expect(new Validator([new AtLeastValidator(1, new DigitValidator()), new EndValidator()]));
             yield return null;
 
-            var pizzaCount = Int32.Parse(_currentLine);
+            var pizzaCount = int.Parse(_currentLine);
             _pizzaCounts.Add(pizzaCount);
             Expect(new Validator([new AtLeastValidator(1, new DigitValidator()), new EndValidator()]));
             yield return null;
             
-            var toppingCount = Int32.Parse(_currentLine);
+            var toppingCount = int.Parse(_currentLine);
             Expect(new NameValidator());
             yield return null;
 
-            for (int i = 0; i < toppingCount; i++)
+            for (var i = 0; i < toppingCount; i++)
             {
                 currentPizza = currentPizza.WithTopping(_currentLine, _toppings);
                 Expect(new NameValidator());
@@ -138,6 +164,32 @@ public class OrderInterpreterMachine : InterpreterMachine
             }
             
         }
+    }
+
+    public Order ToOrder()
+    {
+        if (_name is null || _address is null || _area is null || _time is null)
+        {
+            throw new Exception($"Not all fields where filled in (name, address, area, date/time) ({_name}, {_address}, {_area}, {_time})");
+        }
+
+        if (_pizzas.Count == 0)
+        {
+            throw new Exception("and order was made with not valid pizzas");
+        }
+
+        if (_pizzas.Count != _pizzaCounts.Count)
+        {
+            throw new Exception("Pizza formatting is wrong");
+        }
+
+        var newOrder = new Order(_name, _area, _address, _time);
+        foreach ((Pizza pizza, int count) pizzaData in _pizzas.Zip(_pizzaCounts))
+        {
+            newOrder.AddPizza(pizzaData.pizza, pizzaData.count);
+        }
+
+        return newOrder;
     }
 }
 
